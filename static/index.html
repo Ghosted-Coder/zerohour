@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ZEROHOUR // Alcatraz Open-World Tactical Infiltration</title>
-  <link rel="stylesheet" href="/static/css/style.css?v=20261102">
+  <link rel="stylesheet" href="/static/css/style.css?v=20261103">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -14,21 +14,21 @@
   <a href="#fps-canvas" class="skip-link">Skip to gameplay</a>
 
   <main id="main-content">
-    <!-- SCREEN 1: REGISTRATION & WEATHER SELECTOR -->
+    <!-- SCREEN 1: REGISTRATION -->
     <section id="screen-menu" class="overlay-screen active" aria-label="Operator Ingress Terminal">
       <div class="terminal-frame">
         <header class="terminal-badge">
           <span class="chrome-dot" aria-hidden="true"></span>
-          <span id="badge-auth-status">ALCATRAZ ISLAND // SECTOR REBIRTH</span>
+          <span id="badge-auth-status">ALCATRAZ ISLAND // 4 ENEMY CLASSES</span>
         </header>
         <h1 class="chrome-title">ZEROHOUR</h1>
-        <p class="chrome-subtitle">OPERATION DIGITAL RECKONING // OPEN-WORLD COMBAT</p>
+        <p class="chrome-subtitle">OPERATION DIGITAL RECKONING // 200 AMMO // OPEN CELLHOUSE</p>
         
         <form id="form-registration" class="terminal-form" onsubmit="return false;" novalidate>
           <div class="form-row">
             <label for="input-callsign">OPERATOR CALLSIGN <span class="req" aria-hidden="true">*</span></label>
             <div class="input-box">
-              <span class="input-sym" aria-hidden="true">&gt;</span>
+              <span class="input-sym">&gt;</span>
               <input type="text" id="input-callsign" name="callsign" placeholder="e.g. BRAVO-SIX" value="BRAVO-SIX" required autocomplete="off">
               <button type="button" id="btn-rnd-callsign" class="btn-chrome-sm" aria-label="Generate random callsign">RND</button>
             </div>
@@ -37,12 +37,11 @@
           <div class="form-row">
             <label for="input-email">COMM FREQ / GMAIL ID <span class="req" aria-hidden="true">*</span></label>
             <div class="input-box">
-              <span class="input-sym" aria-hidden="true">@</span>
+              <span class="input-sym">@</span>
               <input type="email" id="input-email" name="email" placeholder="commander@zerohour.internal" value="commander@zerohour.internal" required autocomplete="off">
             </div>
           </div>
 
-          <!-- DIFFICULTY SELECTOR -->
           <fieldset class="form-row diff-fieldset">
             <legend id="lbl-diff">OPERATION INTENSITY</legend>
             <div class="diff-grid" id="diff-selector" role="radiogroup" aria-labelledby="lbl-diff">
@@ -61,7 +60,6 @@
             </div>
           </fieldset>
 
-          <!-- 4 PROCEDURAL WEATHERS SELECTOR -->
           <fieldset class="form-row diff-fieldset">
             <legend>ENVIRONMENT WEATHER RIG</legend>
             <div class="weather-grid" id="weather-selector" role="radiogroup">
@@ -87,21 +85,21 @@
     <section id="screen-briefing" class="overlay-screen hidden" aria-label="Mission Briefing Dossier">
       <div class="terminal-frame briefing-frame">
         <header class="briefing-top">
-          <span class="chrome-tag" id="campaign-badge">ALCATRAZ ISLAND // TACTICAL DOSSIER</span>
+          <span class="chrome-tag" id="campaign-badge">ALCATRAZ ISLAND // INTEL BRIEFING</span>
           <h2 id="campaign-title">OPERATION DIGITAL RECKONING</h2>
           <div class="briefing-meta">
             <span>OPERATOR: <strong id="meta-callsign" class="chrome-text">BRAVO-SIX</strong></span>
-            <span>WEATHER: <strong id="meta-weather" class="chrome-text color-cyan">SPRING (LUSH TREES)</strong></span>
+            <span>AMMO ALLOCATION: <strong class="chrome-text color-cyan">200 ROUNDS</strong></span>
             <span>STATUS: <strong id="meta-clutter" class="chrome-text color-red">78.5% CLUTTER</strong></span>
           </div>
         </header>
 
         <div class="briefing-body">
           <article class="briefing-intel">
-            <h3 id="mission-heading">PRIMARY MISSION: PURGE COMMERCIAL SATURATION</h3>
-            <p id="mission-desc">Hostile cyber-mercenary squads have locked down Alcatraz Island. Breached cellhouse entrances are open. Eliminate target clusters with full-auto fire.</p>
+            <h3 id="mission-heading">HOSTILE COMBAT CLASSES DETECTED</h3>
+            <p id="mission-desc">4 enemy types identified in Alcatraz: Melee Swordsmen (20 dmg), Speed Stars (fast 10 dmg), Riflemen (30 dmg, dodge with SLIDE), and the 800 HP Stomping Boss.</p>
             <div class="intel-bullet">
-              <strong>TARGETED CLUTTER SENDER CLUSTERS:</strong>
+              <strong>TARGETED CLUTTER CLUSTERS:</strong>
               <ul id="mission-target-list" class="target-list">
                 <li>Scanning active inbox telemetry...</li>
               </ul>
@@ -112,13 +110,11 @@
             <h3>TACTICAL CONTROLS</h3>
             <div class="ctrl-grid">
               <div><kbd>W A S D</kbd> <span>TACTICAL MOVEMENT</span></div>
-              <div><kbd>MOUSE</kbd> <span>LOOK / PRECISION AIM (YXZ)</span></div>
               <div><kbd>HOLD LEFT CLICK</kbd> <span>FULL-AUTO 30-ROUND SPRAY</span></div>
+              <div><kbd>C / CTRL</kbd> <span>SLIDE [DODGES RIFLEMEN SHOTS]</span></div>
               <div><kbd>RIGHT CLICK</kbd> <span>AIM DOWN SIGHTS (RED DOT)</span></div>
               <div><kbd>Q</kbd> <span>TACTICAL EMP SHOCKWAVE [KILLSTREAK]</span></div>
-              <div><kbd>SHIFT</kbd> <span>SPRINT</span></div>
-              <div><kbd>C / CTRL</kbd> <span>TACTICAL SLIDE</span></div>
-              <div><kbd>R</kbd> <span>RELOAD</span></div>
+              <div><kbd>R</kbd> <span>RELOAD [200 TOTAL AMMO]</span></div>
             </div>
           </article>
         </div>
@@ -131,7 +127,7 @@
     </section>
   </main>
 
-  <!-- SCREEN 3: ALCATRAZ 3D ENVIRONMENT -->
+  <!-- SCREEN 3: 3D ALCATRAZ ISLAND -->
   <div id="game-container" role="main" aria-label="3D Gameplay Environment">
     <canvas id="fps-canvas" role="region" aria-label="3D Alcatraz Island Battleground" tabindex="0"></canvas>
 
@@ -139,26 +135,29 @@
       <div class="pointerlock-box">
         <div class="lock-icon" aria-hidden="true">🎯</div>
         <h3>ALCATRAZ INFILTRATION ARMED</h3>
-        <p>CLICK ANYWHERE TO ENGAGE POV CONTROLS</p>
-        <small>[HOLD LEFT CLICK: FULL AUTO] // [Q: EMP BLAST] // [RIGHT CLICK: RED DOT]</small>
+        <p>CLICK TO ENGAGE POV COMBAT // 200 AMMO READY</p>
+        <small>[SLIDE TO DODGE SNIPERS] // [Q: EMP STUN] // [SWORD BOTS: 20 DMG]</small>
       </div>
     </div>
 
     <!-- TACTICAL HUD -->
     <div id="tactical-hud" class="tactical-hud hidden" aria-label="Tactical Heads-Up Display">
       
-      <!-- TOP-LEFT: UAV RADAR MINIMAP -->
       <div class="hud-uav-wrap">
         <canvas id="hud-uav-canvas" width="130" height="130"></canvas>
-        <div class="uav-label">UAV RADAR // 60M</div>
+        <div class="uav-label">UAV RADAR // 70M</div>
       </div>
 
-      <!-- LAST 4 ENEMIES LOCATOR BANNER -->
+      <!-- LAST 4 ENEMIES LOCATOR -->
       <div id="locator-banner" class="locator-banner hidden">
         <span>⚠️ TARGET LOCATOR ACTIVE: <strong id="nearest-target-dist">NEAREST: 35m</strong> ⚠️</span>
       </div>
 
-      <!-- Crosshair & Visual FX -->
+      <!-- STUN WARNING OVERLAY -->
+      <div id="stun-banner" class="stun-banner hidden">
+        <span>⚡ OPERATOR STUNNED BY BOSS STOMP! [5s] ⚡</span>
+      </div>
+
       <div id="crosshair" class="crosshair" aria-hidden="true">
         <div class="ch-line ch-top"></div>
         <div class="ch-line ch-bottom"></div>
@@ -170,24 +169,22 @@
       <div id="damage-vignette" class="damage-vignette" aria-hidden="true"></div>
       <div id="emp-flash" class="emp-flash-overlay hidden" aria-hidden="true"></div>
 
-      <!-- Top Center Objective Bar -->
       <header class="hud-objective-bar">
         <div class="obj-badge" id="hud-mission-badge">ALCATRAZ THREAT RADAR</div>
         <div class="obj-text" id="hud-objective-text" aria-live="polite">THREATS SCATTERED: 0 ACTIVE [ 0 / 0 PURGED ]</div>
       </header>
 
-      <!-- 700 HP JUGGERNAUT BOSS HEALTH BAR -->
+      <!-- 800 HP JUGGERNAUT BOSS HEALTH BAR -->
       <div id="boss-hud-bar" class="boss-hud-bar hidden" role="progressbar">
         <div class="boss-title-wrap">
           <span class="boss-warn" aria-hidden="true">⚠️ ALCATRAZ PROTOCOL NEXUS ⚠️</span>
-          <span class="boss-name">CYBER-JUGGERNAUT // TITAN-01 [700 HP]</span>
+          <span class="boss-name">CYBER-JUGGERNAUT // TITAN-01 [800 HP]</span>
         </div>
         <div class="boss-bar-track">
           <div id="boss-bar-fill" class="boss-bar-fill" style="width: 100%;"></div>
         </div>
       </div>
 
-      <!-- Bottom Left: Health & EMP Meter -->
       <div class="hud-bottom-left">
         <div class="operator-tag" id="hud-callsign">BRAVO-SIX</div>
         <div class="health-wrap">
@@ -207,13 +204,13 @@
         </div>
       </div>
 
-      <!-- Bottom Right: Ammo Display -->
+      <!-- 200 AMMO DISPLAY -->
       <div class="hud-bottom-right">
         <div class="weapon-name">M4A1 CARBINE // 5.56 NATO [RED-DOT]</div>
         <div class="ammo-display" aria-label="Ammunition counter">
           <span id="ammo-clip" class="ammo-clip">30</span>
           <span class="ammo-slash">/</span>
-          <span id="ammo-reserve" class="ammo-reserve">120</span>
+          <span id="ammo-reserve" class="ammo-reserve">200</span>
         </div>
         <div class="fire-mode">FULL AUTO // 750 RPM</div>
       </div>
@@ -222,7 +219,7 @@
     </div>
   </div>
 
-  <!-- SCREEN 4: DEBRIEF & ROI REPORT -->
+  <!-- SCREEN 4: DEBRIEF -->
   <div id="modal-debrief" class="modal-backdrop hidden" role="dialog" aria-modal="true">
     <div class="terminal-frame modal-frame">
       <div class="modal-tag" id="debrief-tag">ALCATRAZ SECURED // CLEANUP PROPOSAL UNLOCKED</div>
@@ -271,8 +268,8 @@
     </div>
   </div>
 
-  <script src="/static/js/audio.js?v=20261102"></script>
-  <script src="/static/js/game3d.js?v=20261102"></script>
-  <script src="/static/js/app.js?v=20261102"></script>
+  <script src="/static/js/audio.js?v=20261103"></script>
+  <script src="/static/js/game3d.js?v=20261103"></script>
+  <script src="/static/js/app.js?v=20261103"></script>
 </body>
 </html>

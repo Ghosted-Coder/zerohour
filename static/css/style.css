@@ -738,3 +738,21 @@ kbd { background: #1e293b; border: 1px solid var(--chrome-silver); color: #fff; 
   letter-spacing: 1px;
 }
 .locator-banner.hidden { display: none !important; }
+
+/* OPERATOR STUNNED BANNER */
+.stun-banner {
+  position: absolute;
+  top: 110px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 51, 68, 0.95);
+  border: 2px solid #ffffff;
+  padding: 8px 24px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  box-shadow: 0 0 25px rgba(255, 51, 68, 0.8);
+  letter-spacing: 2px;
+  animation: pulse 0.5s infinite alternate;
+}
+.stun-banner.hidden { display: none !important; }

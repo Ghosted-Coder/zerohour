@@ -1,10 +1,14 @@
 /**
- * ZEROHOUR 3D FIRST-PERSON SHOOTER ENGINE (ALCATRAZ OPEN-WORLD)
- * Upgrades:
- *  - 8-meter Open Archways (Freely enter and exit Cellhouse)
- *  - Boss Movement Steering & Unblocked Pathing (700 HP Juggernaut pursues actively)
- *  - Last 4 Enemies Target Locator (3D world vertical beacons & live distance tracker)
- *  - 4 Procedural Weather Rigs: Sunny, Rainy, Spring (with 3D Trees), Snow
+ * ZEROHOUR 3D FIRST-PERSON SHOOTER ENGINE (ALCATRAZ ISLAND OPEN-WORLD)
+ * Features:
+ *  - Unblocked Cellhouse Entry (Roof excluded from 2D collision so you can enter freely)
+ *  - 4 Unique Enemy Classes:
+ *      1. Melee Swordsman: 20 dmg/swing, 80 HP, 4.0 m/s
+ *      2. Speed Star: Fast 7.2 m/s, 10 dmg punch, 55 HP
+ *      3. Rifleman: Shoots every 5s, 30 dmg, DODGEABLE WITH SLIDE (C/Ctrl)
+ *      4. Cyber-Juggernaut Boss: 800 HP (10x melee), 4.0 m/s, Stomp Attack (5-sec player stun)
+ *  - 200 Starting Ammo in all difficulties
+ *  - Last 4 Targets Beacon & Distance Locator
  */
 class FPSGameEngine {
   constructor(canvasId, sound) {
@@ -21,7 +25,7 @@ class FPSGameEngine {
       health: 100,
       maxHealth: 100,
       ammoClip: 30,
-      ammoReserve: 120,
+      ammoReserve: 200, // 200 AMMO IN EVERY DIFFICULTY
       isSprinting: false,
       isADS: false,
       isReloading: false,
@@ -29,6 +33,8 @@ class FPSGameEngine {
       slideTimer: 0,
       slideDir: new THREE.Vector3(),
       canJump: true,
+      isStunned: false,
+      stunTimer: 0,
       shotsFired: 0,
       shotsHit: 0,
       empCharge: 0,
@@ -38,7 +44,7 @@ class FPSGameEngine {
     this.yaw = 0;
     this.isLocked = false;
     this.difficulty = "veteran";
-    this.weatherType = "spring"; // sunny, rainy, spring, snow
+    this.weatherType = "spring";
     this.totalThreatsCount = 0;
 
     this.keys = { w: false, a: false, s: false, d: false, shift: false };
@@ -109,7 +115,6 @@ class FPSGameEngine {
     });
   }
 
-  // 4 DYNAMIC RIGGED WEATHERS
   applyWeather(type) {
     this.weatherType = type;
     if (this.weatherParticles) {
@@ -142,7 +147,7 @@ class FPSGameEngine {
       this.ambientLight.intensity = 2.1;
       this.sunLight.color.setHex(0xfff0d0);
       this.sunLight.intensity = 1.8;
-      this.spawnCourtyardTrees(); // Spawns procedural 3D trees!
+      this.spawnCourtyardTrees();
     }
     else if (type === "snow") {
       this.scene.background = new THREE.Color(0x8da4bc);
@@ -154,21 +159,18 @@ class FPSGameEngine {
     }
   }
 
-  // PROCEDURAL 3D TREES RIG (SPRING)
   spawnCourtyardTrees() {
     const treeCoords = [
-      [-30, 40], [-45, 25], [30, 40], [45, 25],
+      [-30, 45], [-45, 25], [30, 45], [45, 25],
       [-50, -20], [50, -20], [-40, -45], [40, -45]
     ];
     treeCoords.forEach(([tx, tz]) => {
       const group = new THREE.Group();
-      // Wooden trunk
       const trunkMat = new THREE.MeshStandardMaterial({ color: 0x3d2817, roughness: 0.9 });
       const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.5, 4.0, 8), trunkMat);
       trunk.position.y = 2.0;
       group.add(trunk);
 
-      // Lush green foliage tiers
       const leafMat = new THREE.MeshStandardMaterial({ color: 0x228b22, roughness: 0.6 });
       [3.8, 5.2, 6.4].forEach((ly, idx) => {
         const radius = 2.4 - idx * 0.6;
@@ -180,7 +182,6 @@ class FPSGameEngine {
       group.position.set(tx, 0, tz);
       this.scene.add(group);
       this.treeMeshes.push(group);
-      // Tree trunk obstacle collision
       this.wallBoxes.push({
         min: { x: tx - 0.6, z: tz - 0.6 },
         max: { x: tx + 0.6, z: tz + 0.6 }
@@ -218,7 +219,7 @@ class FPSGameEngine {
     this.scene.add(this.weatherParticles);
   }
 
-  // ALCATRAZ MAP WITH 8-METER WIDE OPEN ARCHWAYS (CAN FREELY ENTER CELLHOUSE)
+  // ALCATRAZ MAP WITH UNBLOCKED CELLHOUSE ENTRY (ROOF EXCLUDED FROM 2D COLLISION)
   buildAlcatrazMap() {
     this.wallBoxes = [];
     this.searchlights = [];
@@ -232,23 +233,26 @@ class FPSGameEngine {
     island.rotation.x = -Math.PI / 2;
     this.scene.add(island);
 
-    const addBoxObstacle = (x, z, w, d, h, color = 0x242e3c) => {
+    const addBoxObstacle = (x, z, w, d, h, color = 0x242e3c, isRoof = false) => {
       const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshStandardMaterial({ color, roughness: 0.5, metalness: 0.4 }));
-      mesh.position.set(x, h / 2, z);
+      mesh.position.set(x, isRoof ? 10 : h / 2, z);
       this.scene.add(mesh);
-      this.wallBoxes.push({
-        min: { x: x - w / 2, z: z - d / 2 },
-        max: { x: x + w / 2, z: z + d / 2 }
-      });
+
+      // ONLY ADD SOLID WALLS TO COLLISION BOXES! (NEVER ADD ROOF SO PLAYERS CAN FREELY ENTER)
+      if (!isRoof) {
+        this.wallBoxes.push({
+          min: { x: x - w / 2, z: z - d / 2 },
+          max: { x: x + w / 2, z: z + d / 2 }
+        });
+      }
       return mesh;
     };
 
-    // MAIN CELLHOUSE CITADEL WITH 8M WIDE ARCHWAYS (NORTH, SOUTH, EAST, WEST)
-    // South Wall with 8m Archway (x=[-4, 4] is wide open!)
+    // South Entrance Archway: x=[-4, 4] is wide open (x=0 z=30 is open!)
     addBoxObstacle(-11, 30, 14, 2, 10);
     addBoxObstacle(11, 30, 14, 2, 10);
 
-    // North Wall with 8m Archway
+    // North Entrance Archway: x=[-4, 4] is wide open
     addBoxObstacle(-11, -30, 14, 2, 10);
     addBoxObstacle(11, -30, 14, 2, 10);
 
@@ -260,11 +264,10 @@ class FPSGameEngine {
     addBoxObstacle(18, -17, 2, 26, 10);
     addBoxObstacle(18, 17, 2, 26, 10);
 
-    // Helipad / Roof
-    const roof = addBoxObstacle(0, 0, 38, 62, 0.6, 0x121720);
-    roof.position.y = 10;
+    // ROOF IS EXCLUDED FROM 2D COLLISION BOXES
+    addBoxObstacle(0, 0, 38, 62, 0.6, 0x121720, true);
 
-    // Interior Server Racks placed with wide 6m unobstructed central aisle
+    // Interior Server Racks with wide 8m central corridor
     for (let sz = -18; sz <= 18; sz += 9) {
       addBoxObstacle(-12, sz, 3, 1.4, 4.5, 0x161c28);
       addBoxObstacle(12, sz, 3, 1.4, 4.5, 0x161c28);
@@ -283,14 +286,14 @@ class FPSGameEngine {
       this.searchlights.push({ spot, target, baseAngle: Math.random() * Math.PI * 2, cx: tx, cz: tz });
     });
 
-    // Courtyard Perimeter & Barricades
+    // Courtyard Perimeter Barricades
     addBoxObstacle(-35, 20, 1.2, 30, 2.5, 0x334155);
     addBoxObstacle(35, 20, 1.2, 30, 2.5, 0x334155);
-    addBoxObstacle(0, 60, 45, 1.2, 2.5, 0x334155);
+    addBoxObstacle(0, 65, 45, 1.2, 2.5, 0x334155);
 
     for (let b = -40; b <= 40; b += 20) {
       if (Math.abs(b) < 10) continue;
-      addBoxObstacle(b, 35, 3.5, 1.4, 1.5, 0x475569);
+      addBoxObstacle(b, 48, 3.5, 1.4, 1.5, 0x475569);
     }
   }
 
@@ -513,6 +516,12 @@ class FPSGameEngine {
     }
     this.bossSpawned = false;
 
+    // Reset 200 starting ammo
+    this.player.ammoClip = 30;
+    this.player.ammoReserve = 200;
+    this.player.isStunned = false;
+    this.player.stunTimer = 0;
+
     const targetCounts = { recruit: 16, veteran: 24, elite: 32 };
     const requiredNum = targetCounts[this.difficulty] || 24;
 
@@ -530,9 +539,13 @@ class FPSGameEngine {
 
     this.totalThreatsCount = this.threats.length;
 
+    // CREATE 4 ENEMY CLASSES: 1. Melee (Sword), 2. Speed Star, 3. Rifleman (Sniper), 4. Boss
+    const enemyTypes = ["melee", "speed", "rifleman"];
+
     this.threats.forEach((th, i) => {
+      const enemyClass = enemyTypes[i % 3];
       const angle = (i / this.threats.length) * Math.PI * 2;
-      const radius = 22 + ((i * 9) % 55);
+      const radius = 20 + ((i * 9) % 55);
       let ex = Math.cos(angle) * radius;
       let ez = Math.sin(angle) * radius;
 
@@ -543,21 +556,29 @@ class FPSGameEngine {
         attempts++;
       }
 
-      const enemyMesh = this.createSoldierMesh(th.category, false);
+      const enemyMesh = this.createEnemyMeshByClass(enemyClass, false);
       enemyMesh.position.set(ex, 0, ez);
       this.scene.add(enemyMesh);
+
+      // CLASS STATS:
+      // Melee: 80 HP, 4.0 m/s, 20 dmg
+      // Speed: 55 HP, 7.2 m/s, 10 dmg
+      // Rifleman: 70 HP, 3.0 m/s, 30 dmg (dodgeable with slide)
+      const hp = enemyClass === "speed" ? 55 : (enemyClass === "rifleman" ? 70 : 80);
 
       this.enemies.push({
         id: th.id,
         subject: th.subject,
         sender: th.sender,
+        enemyClass: enemyClass,
         mesh: enemyMesh,
-        health: 80,
-        maxHealth: 80,
+        health: hp,
+        maxHealth: hp,
         isBoss: false,
         isStunned: false,
         stunTimer: 0,
         lastAttack: 0,
+        lastRifleShot: performance.now() + Math.random() * 3000,
         threatLevel: th.threat_level || 3
       });
     });
@@ -565,7 +586,6 @@ class FPSGameEngine {
     this.updateHudCounter();
   }
 
-  // UPDATE RADAR & LAST 4 ENEMIES LOCATOR
   updateHudCounter() {
     const activeRemaining = this.enemies.length;
     const neutralized = this.totalThreatsCount - activeRemaining;
@@ -574,12 +594,10 @@ class FPSGameEngine {
       hudObj.textContent = "ALCATRAZ THREATS: " + activeRemaining + " ACTIVE [ " + neutralized + " / " + this.totalThreatsCount + " PURGED ]";
     }
 
-    // LAST 4 ENEMIES TARGET LOCATOR
     const locBanner = document.getElementById("locator-banner");
     if (locBanner) {
       if (activeRemaining <= 4 && activeRemaining > 0) {
         locBanner.classList.remove("hidden");
-        // Calculate distance to nearest remaining threat
         let minDist = 999;
         this.enemies.forEach(en => {
           const d = this.player.position.distanceTo(en.mesh.position);
@@ -646,19 +664,21 @@ class FPSGameEngine {
           ctx.fill();
           ctx.strokeStyle = "#ffffff";
           ctx.stroke();
+        } else if (en.enemyClass === "rifleman") {
+          ctx.fillStyle = "#ffaa00"; // Orange blip for riflemen
+          ctx.beginPath();
+          ctx.arc(rx, ry, 3.5, 0, Math.PI * 2);
+          ctx.fill();
+        } else if (en.enemyClass === "speed") {
+          ctx.fillStyle = "#00d4ff"; // Cyan blip for speedsters
+          ctx.beginPath();
+          ctx.arc(rx, ry, 3, 0, Math.PI * 2);
+          ctx.fill();
         } else {
-          // If 4 or fewer enemies, highlight with glowing circle on UAV
-          if (this.enemies.length <= 4) {
-            ctx.fillStyle = "#00ffcc";
-            ctx.beginPath();
-            ctx.arc(rx, ry, 5, 0, Math.PI * 2);
-            ctx.fill();
-          } else {
-            ctx.fillStyle = "#ff3344";
-            ctx.beginPath();
-            ctx.arc(rx, ry, 3, 0, Math.PI * 2);
-            ctx.fill();
-          }
+          ctx.fillStyle = "#ff3344"; // Red blip for swordsmen
+          ctx.beginPath();
+          ctx.arc(rx, ry, 3, 0, Math.PI * 2);
+          ctx.fill();
         }
       }
     });
@@ -677,16 +697,20 @@ class FPSGameEngine {
     ctx.restore();
   }
 
-  createSoldierMesh(cat, isBoss = false) {
+  // 4 DIFFERENT VISUAL MODELS: 1. Melee (Sword), 2. Speed Star (Gauntlets), 3. Rifleman (Sniper), 4. Boss
+  createEnemyMeshByClass(enemyClass, isBoss = false) {
     const group = new THREE.Group();
     const scale = isBoss ? 2.3 : 1.0;
-    const visorColor = isBoss ? 0xff0022 : (cat === "phishing" ? 0xff2244 : 0x00e1ff);
 
-    const camoMat = new THREE.MeshStandardMaterial({ color: isBoss ? 0x08090d : 0x1a212b, roughness: 0.4 });
-    const vestMat = new THREE.MeshStandardMaterial({ color: isBoss ? 0x1f0408 : 0x10141a, roughness: 0.3, metalness: 0.5 });
-    const armorPlateMat = new THREE.MeshStandardMaterial({ color: 0x05070a, metalness: 0.95, roughness: 0.15 });
-    const skinMat = new THREE.MeshStandardMaterial({ color: 0x333a44 });
-    const meleeWeaponMat = new THREE.MeshStandardMaterial({ color: 0xdde4ec, metalness: 0.95, roughness: 0.1 });
+    let visorColor = 0xff2244;
+    let bodyColor = 0x1a212b;
+    if (enemyClass === "speed") { visorColor = 0x00d4ff; bodyColor = 0x162a38; }
+    if (enemyClass === "rifleman") { visorColor = 0xffaa00; bodyColor = 0x242418; }
+    if (isBoss) { visorColor = 0xff0022; bodyColor = 0x090a0d; }
+
+    const camoMat = new THREE.MeshStandardMaterial({ color: bodyColor, roughness: 0.4 });
+    const vestMat = new THREE.MeshStandardMaterial({ color: 0x0e1218, roughness: 0.3, metalness: 0.5 });
+    const steelMat = new THREE.MeshStandardMaterial({ color: 0xdde4ec, metalness: 0.95, roughness: 0.1 });
 
     const torso = new THREE.Mesh(new THREE.BoxGeometry(0.55 * scale, 0.74 * scale, 0.35 * scale), camoMat);
     torso.position.y = 1.1 * scale;
@@ -696,13 +720,7 @@ class FPSGameEngine {
     vest.position.y = 1.15 * scale;
     group.add(vest);
 
-    for (let p = -0.16; p <= 0.16; p += 0.16) {
-      const pouch = new THREE.Mesh(new THREE.BoxGeometry(0.12 * scale, 0.19 * scale, 0.09 * scale), armorPlateMat);
-      pouch.position.set(p * scale, 1.05 * scale, 0.22 * scale);
-      group.add(pouch);
-    }
-
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.2 * scale, 16, 16), skinMat);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.2 * scale, 16, 16), new THREE.MeshStandardMaterial({ color: 0x333a44 }));
     head.position.y = 1.64 * scale;
     group.add(head);
 
@@ -710,23 +728,42 @@ class FPSGameEngine {
     helmet.position.y = 1.67 * scale;
     group.add(helmet);
 
-    const visorCenter = new THREE.Mesh(new THREE.BoxGeometry(0.28 * scale, 0.08 * scale, 0.12 * scale), new THREE.MeshBasicMaterial({ color: visorColor }));
-    visorCenter.position.set(0, 1.65 * scale, 0.18 * scale);
-    group.add(visorCenter);
+    const visor = new THREE.Mesh(new THREE.BoxGeometry(0.28 * scale, 0.08 * scale, 0.12 * scale), new THREE.MeshBasicMaterial({ color: visorColor }));
+    visor.position.set(0, 1.65 * scale, 0.18 * scale);
+    group.add(visor);
 
-    for (let t = -0.1; t <= 0.1; t += 0.065) {
-      const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.02 * scale, 0.02 * scale, 0.1 * scale, 8), new THREE.MeshBasicMaterial({ color: visorColor }));
-      tube.rotation.x = Math.PI / 2;
-      tube.position.set(t * scale, 1.65 * scale, 0.24 * scale);
-      group.add(tube);
+    // CLASS SPECIFIC WEAPON IN HAND
+    let weaponMesh = null;
+    if (isBoss) {
+      // 4. JUGGERNAUT SPIKED HYDRAULIC ARM
+      weaponMesh = new THREE.Mesh(new THREE.BoxGeometry(0.12 * scale, 0.12 * scale, 0.85 * scale), steelMat);
+      weaponMesh.position.set(0.3 * scale, 1.05 * scale, 0.35 * scale);
+      weaponMesh.rotation.x = 0.35;
+    } else if (enemyClass === "melee") {
+      // 1. TACTICAL CYBER SWORD
+      weaponMesh = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.08, 0.8), new THREE.MeshStandardMaterial({ color: 0x00ffcc, metalness: 0.9 }));
+      weaponMesh.position.set(0.26, 1.05, 0.35);
+      weaponMesh.rotation.x = 0.35;
+    } else if (enemyClass === "speed") {
+      // 2. COMBAT GAUNTLETS (PUNCHING HANDS)
+      weaponMesh = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.14, 0.18), new THREE.MeshStandardMaterial({ color: 0x00d4ff, metalness: 0.8 }));
+      weaponMesh.position.set(0.25, 1.05, 0.22);
+    } else if (enemyClass === "rifleman") {
+      // 3. SNIPER / PRECISION RIFLE WITH RED LASER
+      weaponMesh = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.1, 0.95), new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.9 }));
+      weaponMesh.position.set(0.25, 1.1, 0.4);
+
+      // Red Laser Sight Beam
+      const laserGeo = new THREE.CylinderGeometry(0.008, 0.008, 18, 6);
+      const laserMat = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.6 });
+      const laser = new THREE.Mesh(laserGeo, laserMat);
+      laser.rotation.x = Math.PI / 2;
+      laser.position.set(0, 0.04, 9.0);
+      weaponMesh.add(laser);
     }
+    group.add(weaponMesh);
 
-    const bladeArm = new THREE.Mesh(new THREE.BoxGeometry(0.08 * scale, 0.09 * scale, 0.72 * scale), meleeWeaponMat);
-    bladeArm.position.set(0.26 * scale, 1.05 * scale, 0.32 * scale);
-    bladeArm.rotation.x = 0.35;
-    group.add(bladeArm);
-
-    // 3D BEACON MARKER (Appears when only last 4 enemies remain)
+    // BEACON FOR LAST 4 TARGETS
     const beaconGeo = new THREE.CylinderGeometry(0.05, 0.05, 6.0, 8);
     const beaconMat = new THREE.MeshBasicMaterial({ color: 0x00ffcc, transparent: true, opacity: 0.7 });
     const beacon = new THREE.Mesh(beaconGeo, beaconMat);
@@ -743,11 +780,11 @@ class FPSGameEngine {
     rightLeg.position.set(0.16 * scale, 0.38 * scale, 0);
     group.add(rightLeg);
 
-    group.userData = { leftLeg, rightLeg, bladeArm, beacon, animPhase: Math.random() * Math.PI, isBoss };
+    group.userData = { leftLeg, rightLeg, weaponMesh, beacon, animPhase: Math.random() * Math.PI, isBoss, enemyClass };
     return group;
   }
 
-  // SPAWN JUGGERNAUT BOSS (700 HP) IN OPEN COURTYARD
+  // 4. SPAWN 800 HP JUGGERNAUT BOSS (10X MELEE HEALTH)
   spawnBoss() {
     if (this.bossSpawned) return;
     this.bossSpawned = true;
@@ -757,18 +794,19 @@ class FPSGameEngine {
       this.sound.startBossBattleMusic();
     }
 
-    const bossMesh = this.createSoldierMesh("phishing", true);
-    // Spawns right outside the southern archway in courtyard (unobstructed movement!)
+    const bossMesh = this.createEnemyMeshByClass("boss", true);
     bossMesh.position.set(0, 0, 15);
     this.scene.add(bossMesh);
 
+    // 800 HP (10X OF 80 HP MELEE ENEMY)
     this.boss = {
       id: "BOSS-TITAN",
       subject: "CYBER-JUGGERNAUT // TITAN-01 [ROOT PROTOCOL]",
       mesh: bossMesh,
-      health: 700,
-      maxHealth: 700,
+      health: 800,
+      maxHealth: 800,
       isBoss: true,
+      enemyClass: "boss",
       isStunned: false,
       stunTimer: 0,
       lastAttack: 0,
@@ -789,7 +827,7 @@ class FPSGameEngine {
     ring.rotation.x = -Math.PI / 2;
     ring.position.set(pos.x, 0.05, pos.z);
     this.scene.add(ring);
-    this.shockwaves.push({ mesh: ring, scale: 1.0, opacity: 0.9 });
+    this.shockwaves.push({ mesh: ring, scale: 1.0, opacity: 0.9, center: pos.clone() });
   }
 
   createFloatingTriageText(pos, textStr) {
@@ -835,6 +873,7 @@ class FPSGameEngine {
 
   shoot() {
     if (this.player.isReloading) return;
+    if (this.player.isStunned) return; // Cannot shoot while stunned by boss!
     if (this.player.ammoClip <= 0) {
       this.reload();
       return;
@@ -965,7 +1004,7 @@ class FPSGameEngine {
   update(dt) {
     const now = performance.now() / 1000;
 
-    // Update Weather Falling Particles (Rain / Snow)
+    // Weather particles
     if (this.weatherParticles) {
       const pos = this.weatherParticles.geometry.attributes.position.array;
       const speed = this.weatherType === "rainy" ? 50 : 8;
@@ -977,6 +1016,22 @@ class FPSGameEngine {
     }
 
     if (!this.isLocked) return;
+
+    // HANDLE OPERATOR STUN STATE (FROM BOSS STOMP)
+    if (this.player.isStunned) {
+      this.player.stunTimer -= dt;
+      const stunEl = document.getElementById("stun-banner");
+      if (stunEl) {
+        stunEl.classList.remove("hidden");
+        stunEl.querySelector("span").textContent = "⚡ OPERATOR STUNNED BY BOSS STOMP! [" + Math.ceil(this.player.stunTimer) + "s] ⚡";
+      }
+      if (this.player.stunTimer <= 0) {
+        this.player.isStunned = false;
+        if (stunEl) stunEl.classList.add("hidden");
+      }
+      // Cannot move or slide while stunned!
+      return;
+    }
 
     if (this.mouse.left && !this.player.isReloading) {
       if (now - this.lastShotTime >= this.fireRate) {
@@ -1084,10 +1139,12 @@ class FPSGameEngine {
       sw.mesh.scale.set(sw.scale, sw.scale, 1);
       sw.mesh.material.opacity = Math.max(0, sw.opacity);
 
-      const distToPlayer = this.player.position.distanceTo(sw.mesh.position);
-      if (distToPlayer < sw.scale * 1.2 && distToPlayer > sw.scale * 0.8 && sw.opacity > 0.4) {
-        this.player.health -= 15 * dt;
-        this.showDamageVignette();
+      // BOSS STOMP STUN TRIGGER (IF IN RANGE < 12M, PLAYER IS STUNNED FOR 5s)
+      const distToPlayer = this.player.position.distanceTo(sw.center);
+      if (distToPlayer < 12.0 && sw.opacity > 0.5 && !this.player.isStunned) {
+        this.player.isStunned = true;
+        this.player.stunTimer = 5.0; // 5-SECOND STUN!
+        this.createFloatingTriageText(this.player.position, "⚡ STUNNED BY BOSS STOMP! (5s)");
       }
 
       if (sw.opacity <= 0) {
@@ -1096,16 +1153,13 @@ class FPSGameEngine {
       }
     }
 
-    // ENEMY & UNBLOCKED BOSS CHASE AI
+    // 4 COMBAT ENEMY CLASSES AI
     const timeMs = performance.now();
-    const speedMap = { recruit: 3.8, veteran: 4.8, elite: 5.8 };
-    const baseChaseSpeed = speedMap[this.difficulty] || 4.8;
     const isLast4 = this.enemies.length <= 4;
 
     for (let i = 0; i < this.enemies.length; i++) {
       const en = this.enemies[i];
 
-      // Activate vertical glowing beacon on remaining targets
       if (en.mesh.userData.beacon) {
         en.mesh.userData.beacon.visible = isLast4;
       }
@@ -1119,18 +1173,55 @@ class FPSGameEngine {
       en.mesh.lookAt(this.player.position.x, 0, this.player.position.z);
       const dist = en.mesh.position.distanceTo(this.player.position);
 
-      en.mesh.userData.animPhase += dt * (en.isBoss ? 4.5 : 8.5);
+      // CLASS SPEEDS:
+      // 1. Melee: 4.0 m/s
+      // 2. Speed Star: 7.2 m/s (Much faster!)
+      // 3. Rifleman: 3.0 m/s (Positions at range)
+      // 4. Boss: 4.0 m/s (Same as melee)
+      let currentSpeed = 4.0;
+      if (en.enemyClass === "speed") currentSpeed = 7.2;
+      if (en.enemyClass === "rifleman") currentSpeed = 3.0;
+      if (en.isBoss) currentSpeed = 4.0;
+
+      en.mesh.userData.animPhase += dt * (en.enemyClass === "speed" ? 14 : 8);
       const legAngle = Math.sin(en.mesh.userData.animPhase) * 0.45;
       en.mesh.userData.leftLeg.rotation.x = legAngle;
       en.mesh.userData.rightLeg.rotation.x = -legAngle;
 
+      const collisionRadius = en.isBoss ? 0.9 : 0.6;
+
+      // CLASS 3: RIFLEMAN SHOOTING (EVERY 5 SECONDS, DODGEABLE BY SLIDING!)
+      if (en.enemyClass === "rifleman") {
+        if (dist > 18) {
+          const toPlayer = new THREE.Vector3().subVectors(this.player.position, en.mesh.position).normalize();
+          toPlayer.y = 0;
+          en.mesh.position.addScaledVector(toPlayer, currentSpeed * dt);
+        }
+
+        // Fires every 5.0s (5000ms)
+        if (timeMs - en.lastRifleShot > 5000) {
+          en.lastRifleShot = timeMs;
+          if (this.sound) this.sound.playGunshot(true);
+
+          // CAN BE DODGED IF PLAYER IS SLIDING!
+          if (this.player.isSliding) {
+            this.createFloatingTriageText(this.player.position, "💨 DODGED SNIPER! (SLIDE)");
+          } else {
+            this.player.health -= 30; // 30 DAMAGE IF HIT
+            this.showDamageVignette();
+            this.createFloatingTriageText(this.player.position, "💥 HIT BY RIFLEMAN (-30 HP)");
+            if (this.player.health <= 0) this.triggerMissionEnd(false);
+          }
+        }
+        continue;
+      }
+
+      // CLASSES 1, 2, & 4: CLOSE-RANGE COMBAT
       const attackRange = en.isBoss ? 3.5 : 2.2;
-      const collisionRadius = en.isBoss ? 0.9 : 0.6; // Streamlined collision box
 
       if (dist > attackRange) {
         const toPlayer = new THREE.Vector3().subVectors(this.player.position, en.mesh.position).normalize();
         toPlayer.y = 0;
-        const currentSpeed = en.isBoss ? 3.6 : baseChaseSpeed;
 
         let canMoveX = false;
         let canMoveZ = false;
@@ -1147,7 +1238,7 @@ class FPSGameEngine {
           canMoveZ = true;
         }
 
-        // Active steering avoidance around archways & server racks
+        // Active steering avoidance around doors and racks
         if (!canMoveX && !canMoveZ) {
           const detX = en.mesh.position.x - toPlayer.z * currentSpeed * dt;
           const detZ = en.mesh.position.z + toPlayer.x * currentSpeed * dt;
@@ -1155,19 +1246,31 @@ class FPSGameEngine {
           if (!this.checkObstacleCollision(en.mesh.position.x, detZ, collisionRadius)) en.mesh.position.z = detZ;
         }
       } else {
-        if (timeMs - en.lastAttack > (en.isBoss ? 1800 : 1100)) {
+        // ATTACK COOLDOWNS & DAMAGES:
+        // Melee: 20 dmg
+        // Speed Star: 10 dmg (rapid punches)
+        // Boss: Ground Stomp (5s Stun) or 30 dmg
+        const attackInterval = en.isBoss ? 2000 : (en.enemyClass === "speed" ? 800 : 1200);
+
+        if (timeMs - en.lastAttack > attackInterval) {
           en.lastAttack = timeMs;
 
           if (en.isBoss) {
+            // BOSS SPECIAL STOMP ATTACK
             if (this.sound) this.sound.playBossSlam();
             this.createShockwave(en.mesh.position);
-            this.player.health -= 30;
-            this.showDamageVignette();
-          } else {
+          } else if (en.enemyClass === "melee") {
+            // MELEE SWORDSMAN: 20 DAMAGE PER SWING
             if (this.sound) this.sound.playMeleeStrike();
-            const dmg = this.difficulty === "elite" ? 18 : 12;
-            this.player.health -= dmg;
+            this.player.health -= 20;
             this.showDamageVignette();
+            this.createFloatingTriageText(this.player.position, "⚔️ SWORD SLASH (-20 HP)");
+          } else if (en.enemyClass === "speed") {
+            // SPEED STAR: 10 DAMAGE PER PUNCH
+            if (this.sound) this.sound.playMeleeStrike();
+            this.player.health -= 10;
+            this.showDamageVignette();
+            this.createFloatingTriageText(this.player.position, "👊 PUNCH (-10 HP)");
           }
 
           if (this.player.health <= 0) {

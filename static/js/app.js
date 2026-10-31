@@ -366,7 +366,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (g) {
         g.player.health = 100;
         g.player.ammoClip = 30;
-        g.player.ammoReserve = 120;
+        g.player.ammoReserve = 200;
         g.loadSession(currentSession.threats || [], selectedDifficulty, selectedWeather);
       }
       if (btnDeploy) btnDeploy.click();
