@@ -6,6 +6,13 @@ class Settings(BaseModel):
     gemini_api_key: str | None = Field(default_factory=lambda: os.getenv("GEMINI_API_KEY"))
     gemini_model: str = Field(default_factory=lambda: os.getenv("GEMINI_MODEL", "gemini-2.5-flash"))
     gemini_embedding_model: str = Field(default_factory=lambda: os.getenv("GEMINI_EMBEDDING_MODEL", "gemini-embedding-2"))
+    allowed_origins: List[str] = Field(
+        default_factory=lambda: [
+            origin.strip()
+            for origin in os.getenv("ALLOWED_ORIGINS", "").split(",")
+            if origin.strip()
+        ]
+    )
     session_backend: str = Field(default_factory=lambda: os.getenv("SESSION_BACKEND", "memory"))
     leaderboard_backend: str = Field(default_factory=lambda: os.getenv("LEADERBOARD_BACKEND", "memory"))
     firestore_project_id: str | None = Field(default_factory=lambda: os.getenv("FIRESTORE_PROJECT_ID"))
