@@ -17,6 +17,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const campaignBadge = document.getElementById("campaign-badge");
   const campaignTitle = document.getElementById("campaign-title");
   const metaCallsign = document.getElementById("meta-callsign");
+  const metaDifficulty = document.getElementById("meta-difficulty");
   const metaSource = document.getElementById("meta-source");
   const metaClutter = document.getElementById("meta-clutter");
   const missionHeading = document.getElementById("mission-heading");
@@ -66,14 +67,13 @@ document.addEventListener("DOMContentLoaded", () => {
     console.error("[ZeroHour] 3D Engine initialization:", err);
   }
 
-  // DIFFICULTY SELECTOR (+10 BOTS)
   function setDifficulty(diff) {
     selectedDifficulty = (diff || "veteran").toLowerCase();
     document.querySelectorAll(".diff-btn").forEach(btn => {
       const match = (btn.getAttribute("data-val") || "").toLowerCase() === selectedDifficulty;
       btn.classList.toggle("selected", match);
-      btn.setAttribute("aria-checked", match ? "true" : "false");
     });
+    if (metaDifficulty) metaDifficulty.textContent = selectedDifficulty.toUpperCase();
   }
 
   document.querySelectorAll(".diff-btn").forEach(btn => {
@@ -111,7 +111,6 @@ document.addEventListener("DOMContentLoaded", () => {
     if (metaSource) metaSource.textContent = "AUTHENTICATED GMAIL";
   }
 
-  // GENERATE ADAPTIVE CAMPAIGN ON INGRESS (+10 BOTS: 16, 24, 32)
   async function handleIngress() {
     const callsign = (inputCallsign.value.trim() || "BRAVO-SIX").toUpperCase();
     const email = inputEmail.value.trim() || "commander@zerohour.internal";
@@ -120,6 +119,7 @@ document.addEventListener("DOMContentLoaded", () => {
     currentSession.difficulty = selectedDifficulty;
 
     if (metaCallsign) metaCallsign.textContent = callsign;
+    if (metaDifficulty) metaDifficulty.textContent = selectedDifficulty.toUpperCase();
 
     screenMenu.classList.add("hidden");
     screenBriefing.classList.remove("hidden");
@@ -188,7 +188,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // DEPLOY TO 3D BUNKER
   if (btnDeploy) {
     btnDeploy.addEventListener("click", () => {
       if (window.soundEngine) {
@@ -201,7 +200,6 @@ document.addEventListener("DOMContentLoaded", () => {
       if (game) {
         game.loadSession(currentSession.threats || [], selectedDifficulty);
         if (hudCallsign) hudCallsign.textContent = currentSession.callsign;
-        if (hudObjective) hudObjective.textContent = "PURGE DIGITAL THREAT NODES [ 0 / " + game.threats.length + " ]";
         game.playCutscene();
       }
     });
@@ -230,7 +228,6 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     game.onKillThreat = (id, subject, neutralized, total) => {
-      if (hudObjective) hudObjective.textContent = "PURGE DIGITAL THREAT NODES [ " + neutralized + " / " + total + " ]";
       const item = document.createElement("div");
       item.className = "killfeed-item";
       item.textContent = "PURGED: " + subject;
@@ -278,7 +275,6 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  // ONE-CLICK LIVE GMAIL EXECUTION
   if (btnExecuteConfirmed) {
     btnExecuteConfirmed.addEventListener("click", async () => {
       const selectedOps = [];

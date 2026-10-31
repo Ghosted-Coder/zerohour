@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ZEROHOUR // AI-Powered Gmail Automation Game</title>
+  <title>ZEROHOUR // 3D First-Person Infiltration</title>
   <link rel="stylesheet" href="/static/css/style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
@@ -11,7 +11,7 @@
 </head>
 <body class="tactical-body">
 
-  <!-- SCREEN 1: REGISTRATION & GMAIL OAUTH (OBSIDIAN & CHROME) -->
+  <!-- SCREEN 1: REGISTRATION / INGRESS (OBSIDIAN & CHROME) -->
   <section id="screen-menu" class="overlay-screen active">
     <div class="terminal-frame">
       <div class="terminal-badge">
@@ -19,7 +19,7 @@
         <span id="badge-auth-status">SANDBOX CLEARANCE // GMAIL READY</span>
       </div>
       <h1 class="chrome-title">ZEROHOUR</h1>
-      <p class="chrome-subtitle">AI-POWERED GMAIL AUTOMATION // TACTICAL CONTROL PLANE</p>
+      <p class="chrome-subtitle">OPERATION DIGITAL RECKONING // HIGH-THREAT INGRESS</p>
       
       <form id="form-registration" class="terminal-form" onsubmit="return false;">
         <div class="form-row">
@@ -39,20 +39,21 @@
           </div>
         </div>
 
+        <!-- DIFFICULTY SELECTOR -->
         <div class="form-row">
           <label>OPERATION INTENSITY</label>
           <div class="diff-grid" id="diff-selector" role="radiogroup">
             <button type="button" class="diff-btn" data-val="recruit">
               <span class="diff-title">RECRUIT</span>
-              <span class="diff-sub">6 THREATS</span>
+              <span class="diff-sub">16 THREATS</span>
             </button>
             <button type="button" class="diff-btn selected" data-val="veteran">
               <span class="diff-title">VETERAN</span>
-              <span class="diff-sub">14 THREATS</span>
+              <span class="diff-sub">24 THREATS</span>
             </button>
             <button type="button" class="diff-btn" data-val="elite">
               <span class="diff-title">ELITE</span>
-              <span class="diff-sub">22 + BOSS</span>
+              <span class="diff-sub">32 + BOSS</span>
             </button>
           </div>
         </div>
@@ -68,7 +69,7 @@
     </div>
   </section>
 
-  <!-- SCREEN 2: ADAPTIVE CAMPAIGN BRIEFING -->
+  <!-- SCREEN 2: BRIEFING -->
   <section id="screen-briefing" class="overlay-screen hidden">
     <div class="terminal-frame briefing-frame">
       <div class="briefing-top">
@@ -76,19 +77,19 @@
         <h2 id="campaign-title">OPERATION DIGITAL RECKONING</h2>
         <div class="briefing-meta">
           <span>OPERATOR: <strong id="meta-callsign" class="chrome-text">BRAVO-SIX</strong></span>
-          <span>MODE: <strong id="meta-source" class="chrome-text">DEMO SANDBOX</strong></span>
-          <span>INBOX CLUTTER SCORE: <strong id="meta-clutter" class="chrome-text color-red">78.5%</strong></span>
+          <span>INTENSITY: <strong id="meta-difficulty" class="chrome-text">VETERAN</strong></span>
+          <span>STATUS: <strong id="meta-clutter" class="chrome-text color-red">78.5% CLUTTER</strong></span>
         </div>
       </div>
 
       <div class="briefing-body">
         <div class="briefing-intel">
           <h3 id="mission-heading">PRIMARY MISSION: PURGE COMMERCIAL SATURATION</h3>
-          <p id="mission-desc">AI intelligence scanned active inbox sectors. Hostile marketing clusters have generated excessive clutter. Deploy into the bunker to neutralize these targets.</p>
+          <p id="mission-desc">Hostile sender nodes have scattered across the sub-terrain data vault. Locate and neutralize target clusters before inbox bandwidth collapses.</p>
           <div class="intel-bullet">
-            <strong>TARGETED SENDER CLUSTERS:</strong>
+            <strong>TARGETED SENDER NODES IN SECTOR:</strong>
             <ul id="mission-target-list" class="target-list">
-              <li>Scanning inbox telemetry...</li>
+              <li>Scanning active inbox telemetry...</li>
             </ul>
           </div>
         </div>
@@ -139,7 +140,7 @@
       </div>
     </div>
 
-    <!-- TACTICAL HUD -->
+    <!-- TACTICAL HUD WITH ACCURATE SCATTERED COUNTERS -->
     <div id="tactical-hud" class="tactical-hud hidden">
       <div id="crosshair" class="crosshair">
         <div class="ch-line ch-top"></div>
@@ -151,15 +152,17 @@
       <div id="hitmarker" class="hitmarker hidden"></div>
       <div id="damage-vignette" class="damage-vignette"></div>
 
+      <!-- Live Accurate Objective Tracker -->
       <header class="hud-objective-bar">
-        <div class="obj-badge" id="hud-mission-badge">ACTIVE MISSION</div>
-        <div class="obj-text" id="hud-objective-text">PURGE DIGITAL THREAT NODES [ 0 / 14 ]</div>
+        <div class="obj-badge" id="hud-mission-badge">ACTIVE THREAT RADAR</div>
+        <div class="obj-text" id="hud-objective-text">THREATS SCATTERED: 0 ACTIVE [ 0 / 0 PURGED ]</div>
       </header>
 
+      <!-- 700 HP BOSS HEALTH BAR -->
       <div id="boss-hud-bar" class="boss-hud-bar hidden">
         <div class="boss-title-wrap">
-          <span class="boss-warn">⚠️ HOSTILE PROTOCOL NEXUS ⚠️</span>
-          <span class="boss-name">CYBER-JUGGERNAUT // TITAN-01 [320 HP]</span>
+          <span class="boss-warn">⚠️ HOSTILE PROTOCOL NEXUS DETECTED ⚠️</span>
+          <span class="boss-name">CYBER-JUGGERNAUT // TITAN-01 [700 HP]</span>
         </div>
         <div class="boss-bar-track">
           <div id="boss-bar-fill" class="boss-bar-fill" style="width: 100%;"></div>
@@ -196,12 +199,9 @@
       <h2 id="debrief-title" class="chrome-title">TACTICAL EXECUTION PANEL</h2>
       <p id="debrief-desc">Combat mission complete. Review and approve live Gmail operations below:</p>
 
-      <!-- PROPOSED ACTIONS TABLE -->
       <div class="proposals-container">
         <h3>PROPOSED ACTIONS (EXPLICIT USER CONFIRMATION REQUIRED)</h3>
-        <div id="proposals-list" class="proposals-list">
-          <!-- Populated dynamically with real sender clusters & actions -->
-        </div>
+        <div id="proposals-list" class="proposals-list"></div>
       </div>
 
       <div class="execution-actions">
