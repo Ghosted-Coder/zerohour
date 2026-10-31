@@ -14,11 +14,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnStartDeploy = document.getElementById("btn-start-deploy");
   const btnConnectGmail = document.getElementById("btn-connect-gmail");
 
-  const campaignBadge = document.getElementById("campaign-badge");
   const campaignTitle = document.getElementById("campaign-title");
   const metaCallsign = document.getElementById("meta-callsign");
   const metaDifficulty = document.getElementById("meta-difficulty");
-  const metaSource = document.getElementById("meta-source");
   const metaClutter = document.getElementById("meta-clutter");
   const missionHeading = document.getElementById("mission-heading");
   const missionDesc = document.getElementById("mission-desc");
@@ -27,7 +25,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnBackMenu = document.getElementById("btn-back-menu");
   const btnSkipCutscene = document.getElementById("btn-skip-cutscene");
 
-  const hudMissionBadge = document.getElementById("hud-mission-badge");
   const hudObjective = document.getElementById("hud-objective-text");
   const hudCallsign = document.getElementById("hud-callsign");
   const healthFill = document.getElementById("health-fill");
@@ -59,14 +56,103 @@ document.addEventListener("DOMContentLoaded", () => {
   let activeCampaign = null;
   let activeMission = null;
 
+  // Initialize Game with Fallback
   let game = null;
-  try {
-    game = new FPSGameEngine("fps-canvas", window.soundEngine);
-    game.start();
-  } catch (err) {
-    console.error("[ZeroHour] 3D Engine initialization:", err);
+  function getOrInitGame() {
+    if (!game && typeof FPSGameEngine !== "undefined" && typeof THREE !== "undefined") {
+      try {
+        game = new FPSGameEngine("fps-canvas", window.soundEngine);
+        game.start();
+        wireGameCallbacks();
+      } catch (err) {
+        console.error("[ZeroHour] Game Init Warning:", err);
+      }
+    }
+    return game;
+  }
+  getOrInitGame();
+
+  function wireGameCallbacks() {
+    if (!game) return;
+    game.onCutsceneFinish = skipCutscene;
+
+    game.onKillThreat = (id, subject, neutralized, total) => {
+      const item = document.createElement("div");
+      item.className = "killfeed-item";
+      item.textContent = "PURGED: " + subject;
+      if (killfeed) killfeed.prepend(item);
+      setTimeout(() => item.remove(), 4000);
+    };
+
+    game.onMissionEnd = async (isVictory, stats) => {
+      if (tacticalHud) tacticalHud.classList.add("hidden");
+      if (pointerlockOverlay) pointerlockOverlay.classList.add("hidden");
+
+      if (isVictory) {
+        if (debriefTag) debriefTag.textContent = "MISSION ACCOMPLISHED // CLEANUP PROPOSAL UNLOCKED";
+        if (debriefTitle) debriefTitle.textContent = "TACTICAL EXECUTION PANEL";
+      } else {
+        if (debriefTag) debriefTag.textContent = "CRITICAL FAILURE // KIA";
+        if (debriefTitle) debriefTitle.textContent = "OPERATOR DOWN";
+      }
+
+      if (resPurged) resPurged.textContent = stats.purged;
+      if (resAccuracy) resAccuracy.textContent = stats.accuracy + "%";
+      if (resHealth) resHealth.textContent = stats.health + "%";
+
+      if (proposalsList && activeMission) {
+        proposalsList.innerHTML = "";
+        activeMission.target_senders.forEach((s, idx) => {
+          const row = document.createElement("div");
+          row.className = "proposal-row";
+          row.innerHTML = `
+            <div>
+              <span class="prop-sender">${s.sender_name}</span> (${s.sender_email})
+              <div style="font-size: 10px; color: #94a3b8;">${s.email_count} matching emails</div>
+            </div>
+            <div style="display: flex; gap: 8px; align-items: center;">
+              <span class="prop-action">[${activeMission.proposed_action}]</span>
+              <span class="prop-risk risk-low">${activeMission.risk_level} RISK</span>
+              <input type="checkbox" checked id="chk-prop-${idx}" data-sender="${s.sender_email}" data-action="${activeMission.proposed_action}">
+            </div>
+          `;
+          proposalsList.appendChild(row);
+        });
+      }
+
+      if (modalDebrief) modalDebrief.classList.remove("hidden");
+    };
   }
 
+  // FAIL-SAFE UNCONDITIONAL SKIP FUNCTION (UNSTICKS THE SCREEN 100%)
+  function skipCutscene() {
+    if (cutsceneOverlay) cutsceneOverlay.classList.add("hidden");
+    if (pointerlockOverlay) pointerlockOverlay.classList.remove("hidden");
+    if (tacticalHud) tacticalHud.classList.remove("hidden");
+
+    const g = getOrInitGame();
+    if (g) {
+      g.isCutscene = false;
+      g.camera.position.set(0, 1.7, 12);
+      if (g.weaponRig) g.weaponRig.position.copy(g.hipPos);
+    }
+  }
+
+  if (btnSkipCutscene) {
+    btnSkipCutscene.addEventListener("click", (e) => {
+      e.preventDefault();
+      skipCutscene();
+    });
+  }
+
+  window.addEventListener("keydown", (e) => {
+    if (e.code === "Space" && cutsceneOverlay && !cutsceneOverlay.classList.contains("hidden")) {
+      e.preventDefault();
+      skipCutscene();
+    }
+  });
+
+  // DIFFICULTY SELECTOR
   function setDifficulty(diff) {
     selectedDifficulty = (diff || "veteran").toLowerCase();
     document.querySelectorAll(".diff-btn").forEach(btn => {
@@ -108,7 +194,6 @@ document.addEventListener("DOMContentLoaded", () => {
     btnConnectGmail.style.borderColor = "#00ffcc";
     btnConnectGmail.style.color = "#00ffcc";
     currentSession.is_real_gmail = true;
-    if (metaSource) metaSource.textContent = "AUTHENTICATED GMAIL";
   }
 
   async function handleIngress() {
@@ -142,7 +227,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (metaClutter) metaClutter.textContent = activeCampaign.inbox_clutter_score.toFixed(1) + "%";
         if (missionHeading) missionHeading.textContent = activeMission.title;
         if (missionDesc) missionDesc.textContent = activeMission.objective_text;
-        if (hudMissionBadge) hudMissionBadge.textContent = activeMission.mission_type.toUpperCase();
 
         if (missionTargetList) {
           missionTargetList.innerHTML = "";
@@ -188,6 +272,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
+  // DEPLOY TO 3D BUNKER (WITH AUTOMATIC 4.5S FAILSAFE TIMEOUT)
   if (btnDeploy) {
     btnDeploy.addEventListener("click", () => {
       if (window.soundEngine) {
@@ -197,83 +282,54 @@ document.addEventListener("DOMContentLoaded", () => {
       screenBriefing.classList.add("hidden");
       cutsceneOverlay.classList.remove("hidden");
 
-      if (game) {
-        game.loadSession(currentSession.threats || [], selectedDifficulty);
+      const g = getOrInitGame();
+      if (g) {
+        g.loadSession(currentSession.threats || [], selectedDifficulty);
         if (hudCallsign) hudCallsign.textContent = currentSession.callsign;
-        game.playCutscene();
+        g.playCutscene();
       }
+
+      // AUTOMATIC SAFETY TIMER: Guarantees screen is never stuck on black
+      setTimeout(() => {
+        skipCutscene();
+      }, 4500);
     });
   }
 
-  function skipCutscene() {
-    if (!game || !game.isCutscene) return;
-    game.isCutscene = false;
-    cutsceneOverlay.classList.add("hidden");
-    pointerlockOverlay.classList.remove("hidden");
-    tacticalHud.classList.remove("hidden");
-    game.camera.position.set(0, 1.7, 12);
-    game.weaponRig.position.copy(game.hipPos);
+  if (pointerlockOverlay) {
+    pointerlockOverlay.addEventListener("click", () => {
+      if (window.soundEngine) window.soundEngine.init();
+      const g = getOrInitGame();
+      if (g && g.canvas) g.canvas.requestPointerLock();
+    });
   }
 
-  if (btnSkipCutscene) btnSkipCutscene.addEventListener("click", skipCutscene);
-  window.addEventListener("keydown", (e) => {
-    if (e.code === "Space" && game && game.isCutscene) skipCutscene();
+  document.addEventListener("pointerlockchange", () => {
+    const g = getOrInitGame();
+    if (!g) return;
+    if (document.pointerLockElement === g.canvas) {
+      g.isLocked = true;
+      if (pointerlockOverlay) pointerlockOverlay.classList.add("hidden");
+    } else {
+      g.isLocked = false;
+      if (modalDebrief && !modalDebrief.classList.contains("hidden")) return;
+      if (g.isCutscene) return;
+      if (pointerlockOverlay) pointerlockOverlay.classList.remove("hidden");
+    }
   });
 
-  if (game) {
-    game.onCutsceneFinish = () => {
-      cutsceneOverlay.classList.add("hidden");
-      pointerlockOverlay.classList.remove("hidden");
-      tacticalHud.classList.remove("hidden");
-    };
+  setInterval(() => {
+    const g = getOrInitGame();
+    if (!g || !g.isLocked) return;
+    if (healthVal) healthVal.textContent = Math.round(g.player.health);
+    if (healthFill) healthFill.style.width = Math.max(0, g.player.health) + "%";
+    if (ammoClip) ammoClip.textContent = g.player.ammoClip;
+    if (ammoReserve) ammoReserve.textContent = g.player.ammoReserve;
 
-    game.onKillThreat = (id, subject, neutralized, total) => {
-      const item = document.createElement("div");
-      item.className = "killfeed-item";
-      item.textContent = "PURGED: " + subject;
-      if (killfeed) killfeed.prepend(item);
-      setTimeout(() => item.remove(), 4000);
-    };
-
-    game.onMissionEnd = async (isVictory, stats) => {
-      tacticalHud.classList.add("hidden");
-      pointerlockOverlay.classList.add("hidden");
-
-      if (isVictory) {
-        if (debriefTag) debriefTag.textContent = "MISSION ACCOMPLISHED // CLEANUP PROPOSAL UNLOCKED";
-        if (debriefTitle) debriefTitle.textContent = "TACTICAL EXECUTION PANEL";
-      } else {
-        if (debriefTag) debriefTag.textContent = "CRITICAL FAILURE // KIA";
-        if (debriefTitle) debriefTitle.textContent = "OPERATOR DOWN";
-      }
-
-      if (resPurged) resPurged.textContent = stats.purged;
-      if (resAccuracy) resAccuracy.textContent = stats.accuracy + "%";
-      if (resHealth) resHealth.textContent = stats.health + "%";
-
-      if (proposalsList && activeMission) {
-        proposalsList.innerHTML = "";
-        activeMission.target_senders.forEach((s, idx) => {
-          const row = document.createElement("div");
-          row.className = "proposal-row";
-          row.innerHTML = `
-            <div>
-              <span class="prop-sender">${s.sender_name}</span> (${s.sender_email})
-              <div style="font-size: 10px; color: #94a3b8;">${s.email_count} matching emails</div>
-            </div>
-            <div style="display: flex; gap: 8px; align-items: center;">
-              <span class="prop-action">[${activeMission.proposed_action}]</span>
-              <span class="prop-risk risk-low">${activeMission.risk_level} RISK</span>
-              <input type="checkbox" checked id="chk-prop-${idx}" data-sender="${s.sender_email}" data-action="${activeMission.proposed_action}">
-            </div>
-          `;
-          proposalsList.appendChild(row);
-        });
-      }
-
-      modalDebrief.classList.remove("hidden");
-    };
-  }
+    if (crosshair) {
+      crosshair.classList.toggle("ads", g.player.isADS);
+    }
+  }, 40);
 
   if (btnExecuteConfirmed) {
     btnExecuteConfirmed.addEventListener("click", async () => {
@@ -316,51 +372,15 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  if (pointerlockOverlay) {
-    pointerlockOverlay.addEventListener("click", () => {
-      if (window.soundEngine) window.soundEngine.init();
-      if (game && game.canvas) game.canvas.requestPointerLock();
-    });
-  }
-
-  document.addEventListener("pointerlockchange", () => {
-    if (!game) return;
-    if (document.pointerLockElement === game.canvas) {
-      game.isLocked = true;
-      pointerlockOverlay.classList.add("hidden");
-    } else {
-      game.isLocked = false;
-      if (!modalDebrief.classList.contains("hidden") || game.isCutscene) return;
-      pointerlockOverlay.classList.remove("hidden");
-    }
-  });
-
-  setInterval(() => {
-    if (!game || !game.isLocked) return;
-    if (healthVal) healthVal.textContent = Math.round(game.player.health);
-    if (healthFill) healthFill.style.width = Math.max(0, game.player.health) + "%";
-    if (ammoClip) ammoClip.textContent = game.player.ammoClip;
-    if (ammoReserve) ammoReserve.textContent = game.player.ammoReserve;
-
-    if (crosshair) {
-      crosshair.classList.toggle("ads", game.player.isADS);
-    }
-  }, 40);
-
   if (btnRestart) {
     btnRestart.addEventListener("click", () => {
-      modalDebrief.classList.add("hidden");
-      if (btnExecuteConfirmed) {
-        btnExecuteConfirmed.disabled = false;
-        btnExecuteConfirmed.innerHTML = "<span>⚡ CONFIRM &amp; EXECUTE IN GMAIL</span>";
-      }
-      if (execMsg) execMsg.classList.add("hidden");
-
-      if (game) {
-        game.player.health = 100;
-        game.player.ammoClip = 30;
-        game.player.ammoReserve = 120;
-        game.loadSession(currentSession.threats || [], selectedDifficulty);
+      if (modalDebrief) modalDebrief.classList.add("hidden");
+      const g = getOrInitGame();
+      if (g) {
+        g.player.health = 100;
+        g.player.ammoClip = 30;
+        g.player.ammoReserve = 120;
+        g.loadSession(currentSession.threats || [], selectedDifficulty);
       }
       if (btnDeploy) btnDeploy.click();
     });
@@ -368,27 +388,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   if (btnReturnBriefing) {
     btnReturnBriefing.addEventListener("click", () => {
-      modalDebrief.classList.add("hidden");
-      screenBriefing.classList.remove("hidden");
+      if (modalDebrief) modalDebrief.classList.add("hidden");
+      if (screenBriefing) screenBriefing.classList.remove("hidden");
     });
-  }
-});
-
-// ARROW KEY NAVIGATION ON DIFFICULTY BUTTONS (WCAG 2.1 AA)
-document.addEventListener("keydown", (e) => {
-  const diffButtons = Array.from(document.querySelectorAll(".diff-btn"));
-  const currentIndex = diffButtons.findIndex(btn => btn.classList.contains("selected"));
-  if (currentIndex === -1) return;
-
-  if (e.key === "ArrowRight" || e.key === "ArrowDown") {
-    e.preventDefault();
-    const nextIndex = (currentIndex + 1) % diffButtons.length;
-    diffButtons[nextIndex].click();
-    diffButtons[nextIndex].focus();
-  } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
-    e.preventDefault();
-    const prevIndex = (currentIndex - 1 + diffButtons.length) % diffButtons.length;
-    diffButtons[prevIndex].click();
-    diffButtons[prevIndex].focus();
   }
 });
