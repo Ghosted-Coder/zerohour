@@ -90,10 +90,13 @@ class SafeExecutionEngine:
                 "ids": chunk,
                 "removeLabelIds": ["INBOX"]
             }
-            async with httpx.AsyncClient(timeout=15.0) as client:
-                res = await client.post(url, headers=headers, json=payload)
-                if res.status_code not in [200, 204]:
-                    return False
+            try:
+                async with httpx.AsyncClient(timeout=15.0) as client:
+                    res = await client.post(url, headers=headers, json=payload)
+                    if res.status_code not in [200, 204]:
+                        return False
+            except httpx.HTTPError:
+                return False
         return True
 
     async def _create_gmail_filter(self, sender: str) -> str:
@@ -103,8 +106,11 @@ class SafeExecutionEngine:
             "criteria": {"from": sender},
             "action": {"removeLabelIds": ["INBOX"]}
         }
-        async with httpx.AsyncClient(timeout=15.0) as client:
-            res = await client.post(url, headers=headers, json=payload)
-            if res.status_code in [200, 201]:
-                return res.json().get("id", "FILTER-CREATED")
+        try:
+            async with httpx.AsyncClient(timeout=15.0) as client:
+                res = await client.post(url, headers=headers, json=payload)
+                if res.status_code in [200, 201]:
+                    return res.json().get("id", "FILTER-CREATED")
+        except httpx.HTTPError:
+            return ""
         return ""

@@ -30,14 +30,14 @@ class SecurityHeadersMiddleware(BaseHTTPMiddleware):
         response.headers["X-Frame-Options"] = "DENY"
         response.headers["X-XSS-Protection"] = "1; mode=block"
         response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
-        # Permissive CSP for Local Three.js WebGL & Google Services
+        response.headers["Permissions-Policy"] = "camera=(), microphone=(), geolocation=()"
         response.headers["Content-Security-Policy"] = (
-            "default-src * 'unsafe-inline' 'unsafe-eval' data: blob:; "
-            "script-src * 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; "
-            "style-src * 'unsafe-inline' https://fonts.googleapis.com; "
-            "font-src * https://fonts.gstatic.com; "
-            "connect-src *; "
-            "img-src * data: blob:;"
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdnjs.cloudflare.com; "
+            "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; "
+            "font-src 'self' https://fonts.gstatic.com; "
+            "connect-src 'self' https://gmail.googleapis.com https://accounts.google.com; "
+            "img-src 'self' data: blob:;"
         )
         return response
 
