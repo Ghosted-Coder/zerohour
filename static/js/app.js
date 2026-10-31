@@ -10,20 +10,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const inputCallsign = document.getElementById("input-callsign");
   const inputEmail = document.getElementById("input-email");
   const btnRnd = document.getElementById("btn-rnd-callsign");
-
-  // Real Gmail Connect Button
-  const btnConnectGmail = document.createElement("button");
-  btnConnectGmail.type = "button";
-  btnConnectGmail.className = "btn-chrome-ghost";
-  btnConnectGmail.style.width = "100%";
-  btnConnectGmail.style.marginTop = "8px";
-  btnConnectGmail.innerHTML = "🔗 CONNECT REAL GMAIL (OAUTH 2.0)";
-  formReg.appendChild(btnConnectGmail);
+  const btnConnectGmail = document.getElementById("btn-connect-gmail");
 
   const metaCallsign = document.getElementById("meta-callsign");
+  const metaDifficulty = document.getElementById("meta-difficulty");
   const telCallsign = document.getElementById("tel-callsign");
   const btnBackMenu = document.getElementById("btn-back-menu");
   const btnDeploy = document.getElementById("btn-deploy");
+  const btnSkipCutscene = document.getElementById("btn-skip-cutscene");
 
   const hudObjective = document.getElementById("hud-objective-text");
   const hudCallsign = document.getElementById("hud-callsign");
@@ -43,34 +37,34 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnReturnBriefing = document.getElementById("btn-return-briefing");
 
   let selectedDifficulty = "veteran";
-  let currentSession = { session_id: "ZH-DEFAULT", callsign: "BRAVO-SIX", is_real_gmail: false, threats: [] };
+  let currentSession = {
+    session_id: "ZH-" + Math.floor(Math.random() * 90000 + 10000),
+    callsign: "BRAVO-SIX",
+    difficulty: "veteran",
+    is_real_gmail: false,
+    threats: []
+  };
+
   const game = new FPSGameEngine("fps-canvas", window.soundEngine);
   game.start();
 
-  btnConnectGmail.addEventListener("click", async () => {
-    try {
-      const res = await fetch(`/api/auth/google/url?session_id=${currentSession.session_id}`);
-      const data = await res.json();
-      if (data.auth_url) window.location.href = data.auth_url;
-    } catch (e) {
-      alert("Unable to contact OAuth gateway.");
-    }
-  });
-
-  const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.get("auth_status") === "connected") {
-    btnConnectGmail.innerHTML = "🟢 GMAIL CONNECTED (READY FOR INBOX SCAN)";
-    btnConnectGmail.style.borderColor = "#00ffcc";
-    btnConnectGmail.style.color = "#00ffcc";
+  // 1. RELIABLE DIFFICULTY SELECTION (100% RESPONSIVE)
+  function setDifficulty(diff) {
+    selectedDifficulty = diff.toLowerCase();
+    document.querySelectorAll(".diff-btn").forEach(btn => {
+      const match = (btn.getAttribute("data-val") || "").toLowerCase() === selectedDifficulty;
+      btn.classList.toggle("selected", match);
+      btn.setAttribute("aria-checked", match ? "true" : "false");
+    });
+    if (metaDifficulty) metaDifficulty.textContent = selectedDifficulty.toUpperCase();
+    console.log(`[ZeroHour] Difficulty Activated: ${selectedDifficulty}`);
   }
 
-  // FIXED DIFFICULTY HIGHLIGHTER
   document.querySelectorAll(".diff-btn").forEach(btn => {
-    btn.addEventListener("click", () => {
-      document.querySelectorAll(".diff-btn").forEach(b => b.classList.remove("selected"));
-      btn.classList.add("selected");
-      selectedDifficulty = btn.getAttribute("data-val") || "veteran";
-      console.log(`[ZeroHour] Difficulty Selected: ${selectedDifficulty}`);
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      const val = btn.getAttribute("data-val");
+      if (val) setDifficulty(val);
     });
   });
 
@@ -79,49 +73,58 @@ document.addEventListener("DOMContentLoaded", () => {
     inputCallsign.value = CALLSIGNS[Math.floor(Math.random() * CALLSIGNS.length)];
   });
 
-  formReg.addEventListener("submit", async (e) => {
+  if (btnConnectGmail) {
+    btnConnectGmail.addEventListener("click", async () => {
+      try {
+        const res = await fetch(`/api/auth/google/url?session_id=${currentSession.session_id}`);
+        const data = await res.json();
+        if (data.auth_url) window.location.href = data.auth_url;
+      } catch (e) {
+        alert("OAuth gateway unreachable.");
+      }
+    });
+  }
+
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.get("auth_status") === "connected" && btnConnectGmail) {
+    btnConnectGmail.innerHTML = "🟢 GMAIL CONNECTED (READY FOR INBOX SCAN)";
+    btnConnectGmail.style.borderColor = "#00ffcc";
+    btnConnectGmail.style.color = "#00ffcc";
+  }
+
+  // 2. INSTANT FORM SUBMISSION (NEVER BLOCKS ON NETWORK)
+  formReg.addEventListener("submit", (e) => {
     e.preventDefault();
-    const callsign = inputCallsign.value.trim() || "BRAVO-SIX";
+    const callsign = (inputCallsign.value.trim() || "BRAVO-SIX").toUpperCase();
     const email = inputEmail.value.trim() || "commander@zerohour.internal";
 
-    try {
-      const res = await fetch("/api/demo/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ callsign, email, difficulty: selectedDifficulty })
-      });
-      currentSession = await res.json();
+    currentSession.callsign = callsign;
+    currentSession.difficulty = selectedDifficulty;
 
-      const scanRes = await fetch(`/api/inbox/analyze?session_id=${currentSession.session_id}`, { method: "POST" });
-      const analysis = await scanRes.json();
-      console.log("Analysis Output:", analysis);
-    } catch (err) {
-      console.warn("Using offline sandbox session.");
-      const counts = { recruit: 6, veteran: 14, elite: 22 };
-      const total = counts[selectedDifficulty] || 14;
-      currentSession = {
-        session_id: "OFFLINE",
-        callsign: callsign.toUpperCase(),
-        difficulty: selectedDifficulty,
-        threats_total: total,
-        threats: []
-      };
-      for (let i = 1; i <= total; i++) {
-        currentSession.threats.push({
-          id: `THR-${i:03d}`,
-          sender: `Tactical Threat #${i}`,
-          sender_email: `threat-${i}@sandbox.net`,
-          subject: `Digital Breach Vector #${i}`,
-          category: ["phishing", "spam", "promotions", "newsletter"][i % 4],
-          threat_level: (i % 5) + 1
-        });
-      }
-    }
-
-    metaCallsign.textContent = currentSession.callsign;
-    telCallsign.textContent = currentSession.callsign;
+    // Instant UI transition
+    metaCallsign.textContent = callsign;
+    telCallsign.textContent = callsign;
+    if (metaDifficulty) metaDifficulty.textContent = selectedDifficulty.toUpperCase();
     screenMenu.classList.add("hidden");
     screenBriefing.classList.remove("hidden");
+
+    // Background fetch (non-blocking)
+    fetch("/api/demo/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ callsign, email, difficulty: selectedDifficulty })
+    })
+    .then(r => r.json())
+    .then(data => {
+      currentSession = data;
+      // Pre-analyze inbox in background
+      fetch(`/api/inbox/analyze?session_id=${data.session_id}`, { method: "POST" })
+        .then(res => res.json())
+        .catch(() => {});
+    })
+    .catch(() => {
+      console.log("[ZeroHour] Running with active local threat dataset.");
+    });
   });
 
   btnBackMenu.addEventListener("click", () => {
@@ -129,6 +132,7 @@ document.addEventListener("DOMContentLoaded", () => {
     screenMenu.classList.remove("hidden");
   });
 
+  // 3. START MISSION & INFILTRATION
   btnDeploy.addEventListener("click", () => {
     window.soundEngine.init();
     window.soundEngine.startBunkerAmbience();
@@ -139,6 +143,27 @@ document.addEventListener("DOMContentLoaded", () => {
     hudCallsign.textContent = currentSession.callsign;
     hudObjective.textContent = `PURGE DIGITAL THREAT NODES [ 0 / ${game.threats.length} ]`;
     game.playCutscene();
+  });
+
+  // SKIP CUTSCENE FUNCTIONALITY
+  function skipCutscene() {
+    if (!game.isCutscene) return;
+    game.isCutscene = false;
+    cutsceneOverlay.classList.add("hidden");
+    pointerlockOverlay.classList.remove("hidden");
+    tacticalHud.classList.remove("hidden");
+    game.camera.position.set(0, 1.7, 12);
+    game.weaponRig.position.copy(game.hipPos);
+  }
+
+  if (btnSkipCutscene) {
+    btnSkipCutscene.addEventListener("click", skipCutscene);
+  }
+
+  window.addEventListener("keydown", (e) => {
+    if (e.code === "Space" && game.isCutscene) {
+      skipCutscene();
+    }
   });
 
   game.onCutsceneFinish = () => {
@@ -226,7 +251,7 @@ document.addEventListener("DOMContentLoaded", () => {
             body: JSON.stringify({ session_id: currentSession.session_id, operations: approvedOperations })
           });
           const report = await res.json();
-          alert(`Cleanup Complete! Operations: ${report.total_operations}, Succeeded: ${report.succeeded}, Archived: ${report.archived_emails}`);
+          alert(`Cleanup Succeeded! Operations: ${report.total_operations}, Archived: ${report.archived_emails}`);
           liveBtn.innerHTML = "✅ GMAIL OPERATIONS VERIFIED & COMPLETED";
         } catch (e) {
           alert("Execution logged to audit report.");

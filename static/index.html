@@ -11,7 +11,7 @@
 </head>
 <body class="tactical-body">
 
-  <!-- SCREEN 1: OBSIDIAN & CHROME REGISTRATION TERMINAL -->
+  <!-- SCREEN 1: REGISTRATION TERMINAL (OBSIDIAN & CHROME) -->
   <section id="screen-menu" class="overlay-screen active">
     <div class="terminal-frame">
       <div class="terminal-badge">
@@ -23,44 +23,49 @@
       
       <form id="form-registration" class="terminal-form" novalidate>
         <div class="form-row">
-          <label>OPERATOR CALLSIGN</label>
+          <label for="input-callsign">OPERATOR CALLSIGN</label>
           <div class="input-box">
             <span class="input-sym">&gt;</span>
-            <input type="text" id="input-callsign" placeholder="e.g. BRAVO-SIX" required autocomplete="off">
+            <input type="text" id="input-callsign" placeholder="e.g. BRAVO-SIX" value="BRAVO-SIX" required autocomplete="off">
             <button type="button" id="btn-rnd-callsign" class="btn-chrome-sm">RND</button>
           </div>
           <span class="error-msg" id="err-callsign"></span>
         </div>
 
         <div class="form-row">
-          <label>SECURE COMM FREQ (EMAIL)</label>
+          <label for="input-email">SECURE COMM FREQ (EMAIL)</label>
           <div class="input-box">
             <span class="input-sym">@</span>
-            <input type="email" id="input-email" placeholder="commander@zerohour.internal" required autocomplete="off">
+            <input type="email" id="input-email" placeholder="commander@zerohour.internal" value="commander@zerohour.internal" required autocomplete="off">
           </div>
           <span class="error-msg" id="err-email"></span>
         </div>
 
+        <!-- RELIABLE ACCESSIBLE DIFFICULTY BUTTONS -->
         <div class="form-row">
-          <label>OPERATION INTENSITY</label>
-          <div class="diff-grid" id="diff-selector">
-            <div class="diff-btn" data-val="recruit">
+          <label id="lbl-diff">OPERATION INTENSITY</label>
+          <div class="diff-grid" id="diff-selector" role="radiogroup" aria-labelledby="lbl-diff">
+            <button type="button" class="diff-btn" data-val="recruit" aria-checked="false">
               <span class="diff-title">RECRUIT</span>
-              <span class="diff-sub">5 THREATS</span>
-            </div>
-            <div class="diff-btn selected" data-val="veteran">
+              <span class="diff-sub">6 THREATS</span>
+            </button>
+            <button type="button" class="diff-btn selected" data-val="veteran" aria-checked="true">
               <span class="diff-title">VETERAN</span>
-              <span class="diff-sub">10 THREATS</span>
-            </div>
-            <div class="diff-btn" data-val="elite">
+              <span class="diff-sub">14 THREATS</span>
+            </button>
+            <button type="button" class="diff-btn" data-val="elite" aria-checked="false">
               <span class="diff-title">ELITE</span>
-              <span class="diff-sub">15 + BOSS</span>
-            </div>
+              <span class="diff-sub">22 + BOSS</span>
+            </button>
           </div>
         </div>
 
-        <button type="submit" class="btn-chrome-primary">
+        <button type="submit" id="btn-start-deploy" class="btn-chrome-primary">
           <span>INITIALIZE DEPLOYMENT &gt;&gt;</span>
+        </button>
+
+        <button type="button" id="btn-connect-gmail" class="btn-chrome-ghost" style="width: 100%; margin-top: 10px;">
+          <span>🔗 CONNECT REAL GMAIL (OAUTH 2.0)</span>
         </button>
       </form>
     </div>
@@ -74,7 +79,7 @@
         <h2>OPERATION DIGITAL RECKONING</h2>
         <div class="briefing-meta">
           <span>OPERATOR: <strong id="meta-callsign" class="chrome-text">BRAVO-SIX</strong></span>
-          <span>LOCATION: <strong class="chrome-text">SUB-TERRAIN DATA BUNKER 07</strong></span>
+          <span>INTENSITY: <strong id="meta-difficulty" class="chrome-text">VETERAN</strong></span>
           <span>WEAPONS: <strong class="chrome-text">M4 CARBINE [FULL-AUTO]</strong></span>
         </div>
       </div>
@@ -82,7 +87,7 @@
       <div class="briefing-body">
         <div class="briefing-intel">
           <h3>SITUATION REPORT</h3>
-          <p>Hostile mercenary drones have taken root in the digital vault. Intel reports enemies are stripped of ranged arms and will rush for close-quarters melee combat. High-threat Juggernaut detected in the sub-level.</p>
+          <p>Hostile mercenary drones have taken root in the data bunker. Intel reports enemies are charging for close-quarters melee combat. High-threat Juggernaut detected in the sub-vault.</p>
           <div class="intel-bullet">
             <strong>HONEST REMEDIATION:</strong> Purged threat nodes produce authentic <code>filters.xml</code> and <code>unsubscribe.csv</code> files upon extraction.
           </div>
@@ -112,7 +117,7 @@
   <div id="game-container">
     <canvas id="fps-canvas"></canvas>
 
-    <!-- CUTSCENE LETTERBOX & TELEMETRY -->
+    <!-- CUTSCENE LETTERBOX & TELEMETRY WITH SKIP BUTTON -->
     <div id="cutscene-overlay" class="cutscene-overlay hidden">
       <div class="cinema-bar cinema-bar-top"></div>
       <div class="cinema-bar cinema-bar-bottom"></div>
@@ -123,6 +128,7 @@
         <div class="telemetry-line highlight">OP: <span id="tel-callsign">BRAVO-SIX</span> // TF-141</div>
         <div class="telemetry-line color-chrome">STATUS: WEAPONS FREE // CODE RED</div>
       </div>
+      <button type="button" id="btn-skip-cutscene" class="btn-skip-intro">SKIP INTRO [SPACE] &gt;&gt;</button>
     </div>
 
     <!-- POINTER LOCK PROMPT -->
@@ -150,10 +156,10 @@
       <!-- Top Objective Bar -->
       <header class="hud-objective-bar">
         <div class="obj-badge">PRIMARY OBJECTIVE</div>
-        <div class="obj-text" id="hud-objective-text">PURGE DIGITAL THREAT NODES [ 0 / 10 ]</div>
+        <div class="obj-text" id="hud-objective-text">PURGE DIGITAL THREAT NODES [ 0 / 14 ]</div>
       </header>
 
-      <!-- BOSS HEALTH BAR (Appears during Boss Battle) -->
+      <!-- BOSS HEALTH BAR -->
       <div id="boss-hud-bar" class="boss-hud-bar hidden">
         <div class="boss-title-wrap">
           <span class="boss-warn">⚠️ HOSTILE PROTOCOL NEXUS ⚠️</span>
