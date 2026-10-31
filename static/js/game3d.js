@@ -584,7 +584,7 @@ class FPSGameEngine {
 
   destroyEnemy(enemy) {
     this.showHitmarker(true);
-    this.scene.remove(enemy.mesh);
+    this.scene.remove(enemy.mesh);\n    if (enemy.mesh.geometry) enemy.mesh.geometry.dispose();
     const idx = this.enemies.indexOf(enemy);
     if (idx > -1) this.enemies.splice(idx, 1);
 

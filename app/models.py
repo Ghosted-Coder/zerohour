@@ -1,10 +1,19 @@
 from typing import List, Optional, Literal, Dict, Any
-from pydantic import BaseModel, EmailStr, Field
+from pydantic import BaseModel, EmailStr, Field, field_validator
+import re
 
 class DemoRegistrationRequest(BaseModel):
     callsign: str = Field(..., min_length=2, max_length=24)
     email: EmailStr
     difficulty: Literal["recruit", "veteran", "elite"] = "veteran"
+
+    @field_validator("callsign")
+    @classmethod
+    def validate_callsign(cls, v: str) -> str:
+        clean = v.strip().upper()
+        if not re.match(r'^[A-Z0-9_\-\s]{2,24}$', clean):
+            raise ValueError("Callsign must contain only alphanumeric characters, dashes, or underscores.")
+        return clean
 
 class EmailThreat(BaseModel):
     id: str
@@ -50,7 +59,6 @@ class InboxAnalysisSummary(BaseModel):
     top_senders: List[SenderCluster]
     clutter_ratio: float
 
-# ZEROHOUR ADAPTIVE CAMPAIGN ENGINE MODELS
 class AdaptiveMission(BaseModel):
     mission_id: str
     title: str

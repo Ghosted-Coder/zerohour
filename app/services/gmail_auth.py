@@ -1,12 +1,16 @@
 import secrets
+import time
 import urllib.parse
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 import httpx
 from app.config import settings
+from app.security import timing_safe_verify
 
-# In-memory secure server token vault (keyed by state/session_id)
+# Hardened Server-Side Token Vault (Tokens NEVER reach frontend JavaScript)
 TOKEN_VAULT: Dict[str, dict] = {}
-OAUTH_STATES: Dict[str, str] = {}
+OAUTH_STATES: Dict[str, Tuple[str, float]] = {} # state -> (session_id, created_timestamp)
+
+STATE_TTL_SECONDS = 600 # 10 minute expiration for CSRF state tokens
 
 GMAIL_SCOPES = [
     "https://www.googleapis.com/auth/gmail.readonly",
@@ -15,9 +19,15 @@ GMAIL_SCOPES = [
 ]
 
 def generate_google_auth_url(session_id: str) -> str:
-    state = secrets.token_urlsafe(24)
-    OAUTH_STATES[state] = session_id
+    state = secrets.token_urlsafe(32)
+    OAUTH_STATES[state] = (session_id, time.time())
     
+    # Evict expired states
+    now = time.time()
+    for s in list(OAUTH_STATES.keys()):
+        if now - OAUTH_STATES[s][1] > STATE_TTL_SECONDS:
+            del OAUTH_STATES[s]
+
     params = {
         "client_id": settings.GOOGLE_CLIENT_ID,
         "redirect_uri": settings.GOOGLE_REDIRECT_URI,
@@ -30,9 +40,19 @@ def generate_google_auth_url(session_id: str) -> str:
     return f"https://accounts.google.com/o/oauth2/v2/auth?{urllib.parse.urlencode(params)}"
 
 async def exchange_code_for_tokens(code: str, state: str) -> Optional[dict]:
-    session_id = OAUTH_STATES.pop(state, None)
-    if not session_id:
+    # Constant-time lookup & verification
+    matched_state = None
+    for s in list(OAUTH_STATES.keys()):
+        if timing_safe_verify(s, state):
+            matched_state = s
+            break
+
+    if not matched_state:
         return None
+
+    session_id, created_at = OAUTH_STATES.pop(matched_state)
+    if time.time() - created_at > STATE_TTL_SECONDS:
+        return None # State expired
 
     token_url = "https://oauth2.googleapis.com/token"
     data = {
@@ -48,6 +68,7 @@ async def exchange_code_for_tokens(code: str, state: str) -> Optional[dict]:
         if res.status_code != 200:
             return None
         token_data = res.json()
+        token_data["created_at"] = time.time()
         TOKEN_VAULT[session_id] = token_data
         return token_data
 

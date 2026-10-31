@@ -567,3 +567,32 @@ kbd { background: #1e293b; border: 1px solid var(--chrome-silver); color: #fff; 
     scroll-behavior: auto !important;
   }
 }
+
+/* WCAG AAA COMPLIANT HIGH-CONTRAST OVERRIDES */
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+/* HIGH CONTRAST FOCUS VISIBLE */
+*:focus-visible {
+  outline: 3px solid #00ffcc !important;
+  outline-offset: 3px !important;
+}
+
+/* HIGH CONTRAST TEXT RATIOS (>7:1) */
+.chrome-subtitle, .operator-tag, .stat-col small, .diff-sub {
+  color: #e2e8f0 !important; /* Exceeds 10:1 ratio */
+}
+
+.hud-objective-bar {
+  border: 2px solid #ffffff !important;
+  background: rgba(6, 8, 11, 0.98) !important;
+}

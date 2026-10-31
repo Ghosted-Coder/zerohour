@@ -373,3 +373,22 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+
+// ARROW KEY NAVIGATION ON DIFFICULTY BUTTONS (WCAG 2.1 AA)
+document.addEventListener("keydown", (e) => {
+  const diffButtons = Array.from(document.querySelectorAll(".diff-btn"));
+  const currentIndex = diffButtons.findIndex(btn => btn.classList.contains("selected"));
+  if (currentIndex === -1) return;
+
+  if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+    e.preventDefault();
+    const nextIndex = (currentIndex + 1) % diffButtons.length;
+    diffButtons[nextIndex].click();
+    diffButtons[nextIndex].focus();
+  } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+    e.preventDefault();
+    const prevIndex = (currentIndex - 1 + diffButtons.length) % diffButtons.length;
+    diffButtons[prevIndex].click();
+    diffButtons[prevIndex].focus();
+  }
+});

@@ -1,46 +1,65 @@
 import re
-from typing import List, Dict, Any
+import time
+from typing import List, Dict, Any, Tuple
 from app.models import SenderCluster, InboxAnalysisSummary
+from app.security import sanitize_input_text
 
-def classify_email_heuristic(sender: str, subject: str, snippet: str, list_unsub: bool) -> tuple[str, float]:
-    combined = f"{sender} {subject} {snippet}".lower()
+# High-efficiency pre-compiled regular expressions
+RE_EMAIL = re.compile(r'<([^>]+)>')
+RE_STRIP_EMAIL = re.compile(r'<[^>]+>')
+RE_FINANCE = re.compile(r'(invoice|statement|receipt|order confirmation|payment|bank|security code|otp|billing|salary|payroll|chase|wells fargo)', re.IGNORECASE)
+RE_WORK = re.compile(r'(re:|fwd:|meeting|resume|interview|invitation|agenda|client|contract)', re.IGNORECASE)
+RE_SOCIAL = re.compile(r'(linkedin|twitter|facebook|instagram|tiktok|friend request|connection|tagged)', re.IGNORECASE)
+RE_NEWSLETTER = re.compile(r'(newsletter|digest|weekly|daily|bulletin|substack|medium|beehiiv)', re.IGNORECASE)
+RE_PROMO = re.compile(r'(sale|discount|% off|deals|coupon|exclusive offer|limited time|free shipping|clearance|promo)', re.IGNORECASE)
+
+# In-memory intelligence cache with 5-minute TTL to prevent redundant Gmail parsing
+INTELLIGENCE_CACHE: Dict[str, Tuple[InboxAnalysisSummary, float]] = {}
+
+def classify_email_heuristic(sender: str, subject: str, snippet: str, list_unsub: bool) -> Tuple[str, float]:
+    combined = f"{sender} {subject} {snippet}"
     
-    # Financial/Transactional (Protected)
-    if any(k in combined for k in ["invoice", "statement", "receipt", "order confirmation", "payment", "bank", "security code", "otp", "billing"]):
-        return ("finance", 0.95)
+    # Financial / Transactional (Strictly Shielded)
+    if RE_FINANCE.search(combined):
+        return ("finance", 0.99)
     
-    # Personal / Direct Work
-    if any(k in combined for k in ["re:", "fwd:", "meeting", "resume", "interview", "invitation", "agenda"]):
-        return ("work", 0.85)
+    # Personal / Direct Work (Strictly Shielded)
+    if RE_WORK.search(combined):
+        return ("work", 0.95)
 
     # Social Notifications
-    if any(k in combined for k in ["linkedin", "twitter", "facebook", "instagram", "tiktok", "friend request", "connection", "tagged"]):
-        return ("social", 0.90)
+    if RE_SOCIAL.search(combined):
+        return ("social", 0.92)
 
     # Newsletters
-    if list_unsub or any(k in combined for k in ["newsletter", "digest", "weekly", "daily", "bulletin", "substack", "medium"]):
-        return ("newsletter", 0.92)
+    if list_unsub or RE_NEWSLETTER.search(combined):
+        return ("newsletter", 0.94)
 
-    # Promotions / Marketing Clutter
-    if any(k in combined for k in ["sale", "discount", "% off", "deals", "coupon", "exclusive offer", "limited time", "free shipping", "clearance"]):
-        return ("promotions", 0.94)
+    # Promotions & Marketing Clutter
+    if RE_PROMO.search(combined):
+        return ("promotions", 0.96)
 
-    return ("promotions" if list_unsub else "personal", 0.70)
+    return ("promotions" if list_unsub else "personal", 0.75)
 
-def cluster_and_analyze_messages(raw_messages: List[Dict[str, Any]]) -> InboxAnalysisSummary:
+def cluster_and_analyze_messages(raw_messages: List[Dict[str, Any]], cache_key: str = None) -> InboxAnalysisSummary:
+    now = time.time()
+    if cache_key and cache_key in INTELLIGENCE_CACHE:
+        cached_result, cached_time = INTELLIGENCE_CACHE[cache_key]
+        if now - cached_time < 300: # 5 min TTL
+            return cached_result
+
     clusters: Dict[str, Dict[str, Any]] = {}
 
     for msg in raw_messages:
-        sender_raw = msg.get("from", "unknown@sender.com")
-        subject = msg.get("subject", "(No Subject)")
-        snippet = msg.get("snippet", "")
+        sender_raw = sanitize_input_text(msg.get("from", "unknown@sender.com"), 90)
+        subject = sanitize_input_text(msg.get("subject", "(No Subject)"), 120)
+        snippet = sanitize_input_text(msg.get("snippet", ""), 160)
         unsub_link = msg.get("list_unsubscribe")
         msg_id = msg.get("id")
 
-        # Extract email address
-        match = re.search(r'<([^>]+)>', sender_raw)
+        match = RE_EMAIL.search(sender_raw)
         sender_email = match.group(1).lower() if match else sender_raw.strip().lower()
-        sender_name = re.sub(r'<[^>]+>', '', sender_raw).strip().strip('"') or sender_email.split('@')[0]
+        sender_name = RE_STRIP_EMAIL.sub('', sender_raw).strip().strip('"') or sender_email.split('@')[0]
 
         if sender_email not in clusters:
             clusters[sender_email] = {
@@ -55,27 +74,25 @@ def cluster_and_analyze_messages(raw_messages: List[Dict[str, Any]]) -> InboxAna
             }
 
         clusters[sender_email]["email_count"] += 1
-        clusters[sender_email]["message_ids"].append(msg_id)
+        if msg_id:
+            clusters[sender_email]["message_ids"].append(msg_id)
         if len(clusters[sender_email]["sample_subjects"]) < 3:
             clusters[sender_email]["sample_subjects"].append(subject)
         
         cat, conf = classify_email_heuristic(sender_raw, subject, snippet, bool(unsub_link))
         clusters[sender_email]["categories"].append((cat, conf))
 
-    # Build ranked clusters
     ranked_clusters: List[SenderCluster] = []
     total_clutter_messages = 0
 
     for email, data in clusters.items():
-        # Determine consensus category
         cats = [c[0] for c in data["categories"]]
         top_cat = max(set(cats), key=cats.count)
         avg_conf = sum(c[1] for c in data["categories"]) / len(data["categories"])
 
-        # Clutter score computation
         count = data["email_count"]
         is_promo = top_cat in ["promotions", "newsletter", "social"]
-        clutter_score = min(100.0, (count * 15.0) if is_promo else (count * 2.0))
+        clutter_score = min(100.0, (count * 15.0) if is_promo else (count * 1.5))
 
         if is_promo:
             total_clutter_messages += count
@@ -97,16 +114,19 @@ def cluster_and_analyze_messages(raw_messages: List[Dict[str, Any]]) -> InboxAna
             message_ids=data["message_ids"]
         ))
 
-    # Sort descending by clutter score
     ranked_clusters.sort(key=lambda x: x.clutter_score, reverse=True)
-
     total_scanned = len(raw_messages)
     clutter_ratio = round((total_clutter_messages / total_scanned), 2) if total_scanned > 0 else 0.0
 
-    return InboxAnalysisSummary(
+    summary = InboxAnalysisSummary(
         total_messages_scanned=total_scanned,
         clutter_messages_count=total_clutter_messages,
         total_clusters=len(ranked_clusters),
         top_senders=ranked_clusters[:15],
         clutter_ratio=clutter_ratio
     )
+
+    if cache_key:
+        INTELLIGENCE_CACHE[cache_key] = (summary, now)
+
+    return summary
