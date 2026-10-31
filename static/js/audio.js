@@ -40,13 +40,12 @@ class ProceduralAudio {
     this.bgmOsc.start();
   }
 
-  // PROCEDURAL INDUSTRIAL 130 BPM BOSS COMBAT SOUNDTRACK
   startBossBattleMusic() {
     this.init();
     if (this.bossMusicInterval) return;
 
     let step = 0;
-    const notes = [55, 55, 110, 55, 65, 55, 82, 73]; // Heavy drop synth bassline
+    const notes = [55, 55, 110, 55, 65, 55, 82, 73];
 
     this.bossMusicInterval = setInterval(() => {
       if (!this.ctx) return;
@@ -67,7 +66,7 @@ class ProceduralAudio {
       osc.start(now);
       osc.stop(now + 0.18);
       step++;
-    }, 230); // ~130 BPM
+    }, 230);
   }
 
   stopBossBattleMusic() {
@@ -77,28 +76,11 @@ class ProceduralAudio {
     }
   }
 
-  playCockWeapon() {
-    this.init();
-    const now = this.ctx.currentTime;
-    const osc = this.ctx.createOscillator();
-    const g = this.ctx.createGain();
-    osc.type = "sawtooth";
-    osc.frequency.setValueAtTime(280, now);
-    osc.frequency.exponentialRampToValueAtTime(650, now + 0.15);
-    g.gain.setValueAtTime(0.25, now);
-    g.gain.linearRampToValueAtTime(0.01, now + 0.15);
-    osc.connect(g);
-    g.connect(this.ctx.destination);
-    osc.start(now);
-    osc.stop(now + 0.15);
-  }
-
   playGunshot(isADS) {
     this.init();
     if (this.ctx && this.ctx.state === "suspended") this.ctx.resume();
     const now = this.ctx.currentTime;
     
-    // Sub-bass heavy thump
     const osc = this.ctx.createOscillator();
     const oscGain = this.ctx.createGain();
     osc.type = "sine";
@@ -111,7 +93,6 @@ class ProceduralAudio {
     osc.start(now);
     osc.stop(now + 0.12);
 
-    // Mechanical powder crack
     if (this.noiseBuffer) {
       const noise = this.ctx.createBufferSource();
       noise.buffer = this.noiseBuffer;
@@ -122,6 +103,40 @@ class ProceduralAudio {
       noiseGain.connect(this.ctx.destination);
       noise.start(now);
     }
+  }
+
+  // WALL IMPACT RICOCHET PING
+  playRicochet() {
+    this.init();
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(1800 + Math.random() * 800, now);
+    osc.frequency.exponentialRampToValueAtTime(400, now + 0.08);
+    gain.gain.setValueAtTime(0.12, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.08);
+  }
+
+  // TACTICAL EMP SHOCKWAVE SOUND
+  playEmpBlast() {
+    this.init();
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(800, now);
+    osc.frequency.exponentialRampToValueAtTime(60, now + 0.7);
+    gain.gain.setValueAtTime(0.8, now);
+    gain.gain.linearRampToValueAtTime(0.01, now + 0.7);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.7);
   }
 
   playReload() {

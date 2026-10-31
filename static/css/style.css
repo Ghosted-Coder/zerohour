@@ -596,3 +596,98 @@ kbd { background: #1e293b; border: 1px solid var(--chrome-silver); color: #fff; 
   border: 2px solid #ffffff !important;
   background: rgba(6, 8, 11, 0.98) !important;
 }
+
+/* UAV MINIMAP RADAR */
+.hud-uav-wrap {
+  position: absolute;
+  top: 24px;
+  left: 24px;
+  background: rgba(8, 12, 18, 0.85);
+  border: 1px solid #64748b;
+  border-radius: 50%;
+  padding: 4px;
+  box-shadow: 0 0 15px rgba(0, 255, 204, 0.2);
+}
+#hud-uav-canvas {
+  display: block;
+  border-radius: 50%;
+}
+.uav-label {
+  position: absolute;
+  bottom: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 8px;
+  color: #94a3b8;
+  letter-spacing: 1px;
+  white-space: nowrap;
+}
+
+/* EMP KILLSTREAK METER */
+.emp-meter-wrap {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+.emp-bar {
+  width: 140px;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid #00d4ff;
+}
+.emp-fill {
+  height: 100%;
+  background: #00d4ff;
+  transition: width 0.2s ease;
+}
+.emp-status {
+  font-size: 11px;
+  font-weight: 700;
+  color: #00d4ff;
+}
+.emp-ready {
+  color: #00ffcc !important;
+  text-shadow: 0 0 8px #00ffcc;
+  animation: pulse 1s infinite alternate;
+}
+
+/* EMP SCREEN FLASH */
+.emp-flash-overlay {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, rgba(0, 212, 255, 0.6) 0%, rgba(0, 100, 255, 0.9) 100%);
+  z-index: 45;
+  pointer-events: none;
+  animation: empFade 0.6s ease-out forwards;
+}
+@keyframes empFade {
+  0% { opacity: 1; }
+  100% { opacity: 0; }
+}
+
+/* QUANTITATIVE ROI GRID (DEBRIEF) */
+.roi-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+  margin: 14px 0;
+}
+.roi-stat-box {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--chrome-border);
+  padding: 10px;
+  text-align: center;
+}
+.roi-val {
+  display: block;
+  font-family: 'Chakra Petch', sans-serif;
+  font-size: 22px;
+  font-weight: 700;
+  color: #ffffff;
+}
+.roi-lbl {
+  font-size: 9px;
+  color: var(--chrome-muted);
+  letter-spacing: 1px;
+}
