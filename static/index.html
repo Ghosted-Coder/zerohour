@@ -3,20 +3,25 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="ZeroHour: Tactical 3D first-person shooter that automates real Gmail inbox cleanup.">
   <title>ZEROHOUR // AI-Powered Gmail Automation Game</title>
-  <link rel="stylesheet" href="/static/css/style.css">
+  <link rel="stylesheet" href="/static/css/style.css?v=20261031b">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+  
+  <!-- THREE.JS WITH DUAL CDN FALLBACK -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    if (typeof THREE === 'undefined') {
+      document.write('<script src="https://unpkg.com/three@0.128.0/build/three.min.js"><\/script>');
+    }
+  </script>
 </head>
 <body class="tactical-body">
 
-  <!-- ACCESSIBILITY: SKIP TO CONTENT -->
-  <a href="#game-container" class="skip-link">Skip to gameplay</a>
+  <a href="#fps-canvas" class="skip-link">Skip to gameplay</a>
 
-  <!-- SCREEN 1: REGISTRATION TERMINAL -->
   <main id="main-content">
+    <!-- SCREEN 1: REGISTRATION -->
     <section id="screen-menu" class="overlay-screen active" aria-label="Operator Ingress Terminal">
       <div class="terminal-frame">
         <header class="terminal-badge">
@@ -31,34 +36,31 @@
             <label for="input-callsign">OPERATOR CALLSIGN <span class="req" aria-hidden="true">*</span></label>
             <div class="input-box">
               <span class="input-sym" aria-hidden="true">&gt;</span>
-              <input type="text" id="input-callsign" name="callsign" placeholder="e.g. BRAVO-SIX" value="BRAVO-SIX" required autocomplete="off" aria-required="true">
+              <input type="text" id="input-callsign" name="callsign" placeholder="e.g. BRAVO-SIX" value="BRAVO-SIX" required autocomplete="off">
               <button type="button" id="btn-rnd-callsign" class="btn-chrome-sm" aria-label="Generate random callsign">RND</button>
             </div>
-            <span class="error-msg" id="err-callsign" role="alert" aria-live="polite"></span>
           </div>
 
           <div class="form-row">
             <label for="input-email">COMM FREQ / GMAIL ID <span class="req" aria-hidden="true">*</span></label>
             <div class="input-box">
               <span class="input-sym" aria-hidden="true">@</span>
-              <input type="email" id="input-email" name="email" placeholder="commander@zerohour.internal" value="commander@zerohour.internal" required autocomplete="off" aria-required="true">
+              <input type="email" id="input-email" name="email" placeholder="commander@zerohour.internal" value="commander@zerohour.internal" required autocomplete="off">
             </div>
-            <span class="error-msg" id="err-email" role="alert" aria-live="polite"></span>
           </div>
 
-          <!-- ACCESSIBILITY: SEMANTIC FIELDSET & LEGEND -->
           <fieldset class="form-row diff-fieldset">
             <legend id="lbl-diff">OPERATION INTENSITY (DIFFICULTY)</legend>
             <div class="diff-grid" id="diff-selector" role="radiogroup" aria-labelledby="lbl-diff">
-              <button type="button" class="diff-btn" data-val="recruit" role="radio" aria-checked="false" aria-label="Recruit difficulty, 16 threats">
+              <button type="button" class="diff-btn" data-val="recruit" role="radio" aria-checked="false">
                 <span class="diff-title">RECRUIT</span>
                 <span class="diff-sub">16 THREATS</span>
               </button>
-              <button type="button" class="diff-btn selected" data-val="veteran" role="radio" aria-checked="true" aria-label="Veteran difficulty, 24 threats">
+              <button type="button" class="diff-btn selected" data-val="veteran" role="radio" aria-checked="true">
                 <span class="diff-title">VETERAN</span>
                 <span class="diff-sub">24 THREATS</span>
               </button>
-              <button type="button" class="diff-btn" data-val="elite" role="radio" aria-checked="false" aria-label="Elite difficulty, 32 threats plus Boss">
+              <button type="button" class="diff-btn" data-val="elite" role="radio" aria-checked="false">
                 <span class="diff-title">ELITE</span>
                 <span class="diff-sub">32 + BOSS</span>
               </button>
@@ -92,10 +94,10 @@
         <div class="briefing-body">
           <article class="briefing-intel">
             <h3 id="mission-heading">PRIMARY MISSION: PURGE COMMERCIAL SATURATION</h3>
-            <p id="mission-desc">Hostile sender nodes have scattered across the sub-terrain data vault. Locate and neutralize target clusters before inbox bandwidth collapses.</p>
+            <p id="mission-desc">Hostile sender nodes have scattered across the data bunker. Eliminate target clusters with full-auto fire.</p>
             <div class="intel-bullet">
               <strong>TARGETED SENDER NODES IN SECTOR:</strong>
-              <ul id="mission-target-list" class="target-list" aria-label="Identified email threat targets">
+              <ul id="mission-target-list" class="target-list">
                 <li>Scanning active inbox telemetry...</li>
               </ul>
             </div>
@@ -123,27 +125,11 @@
     </section>
   </main>
 
-  <!-- SCREEN 3: 3D FIRST-PERSON GAMEPLAY -->
+  <!-- SCREEN 3: 3D FIRST-PERSON GAMEPLAY (INSTANT DIRECT ACCESS) -->
   <div id="game-container" role="main" aria-label="3D Gameplay Environment">
-    <!-- ACCESSIBILITY: CANVAS WITH ARIA-LABEL & FALLBACK -->
-    <canvas id="fps-canvas" role="region" aria-label="3D Tactical Operations Theatre" tabindex="0">
-      Your browser does not support WebGL 3D graphics.
-    </canvas>
+    <canvas id="fps-canvas" role="region" aria-label="3D Tactical Operations Theatre" tabindex="0"></canvas>
 
-    <div id="cutscene-overlay" class="cutscene-overlay hidden" aria-label="Mission Introduction Cutscene">
-      <div class="cinema-bar cinema-bar-top" aria-hidden="true"></div>
-      <div class="cinema-bar cinema-bar-bottom" aria-hidden="true"></div>
-      <div class="cod-telemetry" aria-live="polite">
-        <div class="telemetry-line">&gt; SATELLITE UPLINK ACQUIRED</div>
-        <div class="telemetry-line">LOC: DIGITAL VAULT // SUB-TERRAIN 07</div>
-        <div class="telemetry-line">TIME: 03:28:14Z // D-DAY</div>
-        <div class="telemetry-line highlight">OP: <span id="tel-callsign">BRAVO-SIX</span> // TF-141</div>
-        <div class="telemetry-line color-chrome">STATUS: WEAPONS FREE // CODE RED</div>
-      </div>
-      <button type="button" id="btn-skip-cutscene" class="btn-skip-intro" aria-label="Skip introductory cutscene">SKIP INTRO [SPACE] &gt;&gt;</button>
-    </div>
-
-    <div id="pointerlock-overlay" class="pointerlock-overlay hidden" role="dialog" aria-modal="true" aria-label="Engage controls prompt">
+    <div id="pointerlock-overlay" class="pointerlock-overlay hidden" role="dialog" aria-modal="true">
       <div class="pointerlock-box">
         <div class="lock-icon" aria-hidden="true">🎯</div>
         <h3>SYSTEM ARMED</h3>
@@ -164,14 +150,12 @@
       <div id="hitmarker" class="hitmarker hidden" aria-hidden="true"></div>
       <div id="damage-vignette" class="damage-vignette" aria-hidden="true"></div>
 
-      <!-- Live Objective Tracker -->
       <header class="hud-objective-bar">
         <div class="obj-badge" id="hud-mission-badge">ACTIVE THREAT RADAR</div>
-        <div class="obj-text" id="hud-objective-text" aria-live="polite" aria-atomic="true">THREATS SCATTERED: 0 ACTIVE [ 0 / 0 PURGED ]</div>
+        <div class="obj-text" id="hud-objective-text" aria-live="polite">THREATS SCATTERED: 0 ACTIVE [ 0 / 0 PURGED ]</div>
       </header>
 
-      <!-- 700 HP BOSS HEALTH BAR -->
-      <div id="boss-hud-bar" class="boss-hud-bar hidden" role="progressbar" aria-valuemin="0" aria-valuemax="700" aria-valuenow="700" aria-label="Juggernaut boss health">
+      <div id="boss-hud-bar" class="boss-hud-bar hidden" role="progressbar">
         <div class="boss-title-wrap">
           <span class="boss-warn" aria-hidden="true">⚠️ HOSTILE PROTOCOL NEXUS DETECTED ⚠️</span>
           <span class="boss-name">CYBER-JUGGERNAUT // TITAN-01 [700 HP]</span>
@@ -185,7 +169,7 @@
         <div class="operator-tag" id="hud-callsign">BRAVO-SIX</div>
         <div class="health-wrap">
           <span class="hud-lbl">HEALTH</span>
-          <div class="health-bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="100" aria-label="Player health">
+          <div class="health-bar" role="progressbar">
             <div id="health-fill" class="health-fill"></div>
           </div>
           <span id="health-val" class="health-val">100</span>
@@ -202,18 +186,18 @@
         <div class="fire-mode">FULL AUTO // 750 RPM</div>
       </div>
 
-      <div id="triage-killfeed" class="triage-killfeed" aria-live="polite" aria-atomic="false"></div>
+      <div id="triage-killfeed" class="triage-killfeed" aria-live="polite"></div>
     </div>
   </div>
 
   <!-- SCREEN 4: TACTICAL EXECUTION PANEL -->
-  <div id="modal-debrief" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="debrief-title" aria-describedby="debrief-desc">
+  <div id="modal-debrief" class="modal-backdrop hidden" role="dialog" aria-modal="true">
     <div class="terminal-frame modal-frame">
       <div class="modal-tag" id="debrief-tag">MISSION ACCOMPLISHED // CLEANUP PROPOSAL UNLOCKED</div>
       <h2 id="debrief-title" class="chrome-title">TACTICAL EXECUTION PANEL</h2>
       <p id="debrief-desc">Combat mission complete. Review and approve live Gmail operations below:</p>
 
-      <div class="proposals-container" aria-label="Proposed cleanup operations list">
+      <div class="proposals-container">
         <h3>PROPOSED ACTIONS (EXPLICIT USER CONFIRMATION REQUIRED)</h3>
         <div id="proposals-list" class="proposals-list"></div>
       </div>
@@ -222,7 +206,7 @@
         <button type="button" id="btn-execute-confirmed" class="btn-chrome-primary">
           <span>⚡ CONFIRM &amp; EXECUTE IN GMAIL</span>
         </button>
-        <div id="execution-status-msg" class="exec-msg hidden" role="status" aria-live="polite"></div>
+        <div id="execution-status-msg" class="exec-msg hidden" role="status"></div>
       </div>
 
       <div class="export-box">
@@ -240,8 +224,9 @@
     </div>
   </div>
 
-  <script src="/static/js/audio.js"></script>
-  <script src="/static/js/game3d.js"></script>
-  <script src="/static/js/app.js"></script>
+  <!-- CACHE-BUSTED JAVASCRIPT SOURCES -->
+  <script src="/static/js/audio.js?v=20261031b"></script>
+  <script src="/static/js/game3d.js?v=20261031b"></script>
+  <script src="/static/js/app.js?v=20261031b"></script>
 </body>
 </html>

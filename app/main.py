@@ -4,7 +4,7 @@ from typing import Dict, Any, List
 from fastapi import FastAPI, HTTPException, Response, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, RedirectResponse, JSONResponse
+from fastapi.responses import FileResponse, RedirectResponse
 
 from app.models import (
     DemoRegistrationRequest, SessionState, EmailThreat,
@@ -19,13 +19,8 @@ from app.services.inbox_intelligence import cluster_and_analyze_messages
 from app.services.execution_engine import SafeExecutionEngine, AUDIT_LOGS
 from app.services.adaptive_campaign import generate_personalized_campaign
 
-app = FastAPI(
-    title="ZeroHour AI-Powered Gmail Automation Engine",
-    description="Enterprise-grade tactical email remediation control plane",
-    version="2.0.0"
-)
+app = FastAPI(title="ZeroHour AI-Powered Gmail Automation Engine")
 
-# Apply Security Headers and Rate Limiting Middleware
 app.add_middleware(SecurityHeadersMiddleware)
 app.add_middleware(RateLimiterMiddleware)
 
@@ -37,19 +32,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# PREVENT SAFARI BROWSER SCRIPT CACHING
+@app.middleware("http")
+async def add_no_cache_headers(request: Request, call_next):
+    response = await call_next(request)
+    response.headers["Cache-Control"] = "no-cache, no-store, must-revalidate, max-age=0"
+    response.headers["Pragma"] = "no-cache"
+    response.headers["Expires"] = "0"
+    return response
+
 ACTIVE_SESSIONS: Dict[str, SessionState] = {}
 ACTIVE_CAMPAIGNS: Dict[str, AdaptiveCampaign] = {}
 LATEST_ANALYSIS: Dict[str, InboxAnalysisSummary] = {}
 SERVER_START_TIME = time.time()
 
-# 1. HEALTHCHECK & METRICS (Essential for Enterprise Evaluator Bots)
 @app.get("/healthz")
 async def health_check():
-    return {
-        "status": "healthy",
-        "uptime_seconds": round(time.time() - SERVER_START_TIME, 1),
-        "engine": "ZeroHour Tactical Automation v2.0"
-    }
+    return {"status": "healthy", "uptime_seconds": round(time.time() - SERVER_START_TIME, 1)}
 
 @app.get("/api/metrics")
 async def get_system_metrics():
@@ -59,7 +58,6 @@ async def get_system_metrics():
         "audit_logs_recorded": sum(len(v) for v in AUDIT_LOGS.values())
     }
 
-# 2. SESSION REGISTRATION
 @app.post("/api/demo/register", response_model=SessionState)
 async def register_session(req: DemoRegistrationRequest):
     clean_callsign = sanitize_input_text(req.callsign.strip().upper(), 24)
@@ -100,7 +98,6 @@ async def get_session(session_id: str):
         raise HTTPException(status_code=404, detail="Operation session not found.")
     return session
 
-# 3. OAUTH PKCE ENDPOINTS
 @app.get("/api/auth/google/url")
 async def get_oauth_url(session_id: str):
     url = gmail_auth.generate_google_auth_url(session_id)
@@ -123,11 +120,9 @@ async def disconnect_auth(session_id: str):
     success = gmail_auth.disconnect_gmail(session_id)
     return {"disconnected": success}
 
-# 4. INBOX INTELLIGENCE & ADAPTIVE CAMPAIGN
 @app.post("/api/inbox/analyze", response_model=InboxAnalysisSummary)
 async def analyze_inbox(session_id: str):
     token = await gmail_auth.get_valid_access_token(session_id)
-    
     if token:
         client = GmailClient(token)
         raw_messages = await client.list_inbox_messages(max_results=50)
@@ -180,30 +175,22 @@ async def get_active_campaign(session_id: str):
         ACTIVE_CAMPAIGNS[session_id] = campaign
     return campaign
 
-# 5. GMAIL AUTOMATION EXECUTION ENGINE & AUDIT
 @app.post("/api/inbox/execute", response_model=AuditReport)
 async def execute_cleanup(req: CleanupOperationRequest):
     token = await gmail_auth.get_valid_access_token(req.session_id)
     token_str = token if token else "SANDBOX_MOCK_TOKEN"
-
     executor = SafeExecutionEngine(token_str, req.session_id)
-    audit_report = await executor.execute_plan(req.operations)
-    return audit_report
+    return await executor.execute_plan(req.operations)
 
 @app.get("/api/inbox/audit/{session_id}", response_model=AuditReport)
 async def get_audit_report(session_id: str):
     items = AUDIT_LOGS.get(session_id, [])
-    succeeded = sum(1 for i in items if i.status == "SUCCEEDED")
-    failed = sum(1 for i in items if i.status == "FAILED")
-    archived = sum(i.message_count for i in items if i.action == "archive" and i.status == "SUCCEEDED")
-    filters = sum(1 for i in items if i.action == "filter" and i.status == "SUCCEEDED")
-
     return AuditReport(
         total_operations=len(items),
-        succeeded=succeeded,
-        failed=failed,
-        archived_emails=archived,
-        filters_created=filters,
+        succeeded=sum(1 for i in items if i.status == "SUCCEEDED"),
+        failed=sum(1 for i in items if i.status == "FAILED"),
+        archived_emails=sum(i.message_count for i in items if i.action == "archive" and i.status == "SUCCEEDED"),
+        filters_created=sum(1 for i in items if i.action == "filter" and i.status == "SUCCEEDED"),
         items=items
     )
 

@@ -1,9 +1,8 @@
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("[ZeroHour] Initializing Tactical Infiltration Controller...");
+  console.log("[ZeroHour] Initializing Instant First-Person Tactical Controller...");
 
   const screenMenu = document.getElementById("screen-menu");
   const screenBriefing = document.getElementById("screen-briefing");
-  const cutsceneOverlay = document.getElementById("cutscene-overlay");
   const pointerlockOverlay = document.getElementById("pointerlock-overlay");
   const tacticalHud = document.getElementById("tactical-hud");
   const modalDebrief = document.getElementById("modal-debrief");
@@ -23,7 +22,6 @@ document.addEventListener("DOMContentLoaded", () => {
   const missionTargetList = document.getElementById("mission-target-list");
   const btnDeploy = document.getElementById("btn-deploy");
   const btnBackMenu = document.getElementById("btn-back-menu");
-  const btnSkipCutscene = document.getElementById("btn-skip-cutscene");
 
   const hudObjective = document.getElementById("hud-objective-text");
   const hudCallsign = document.getElementById("hud-callsign");
@@ -56,7 +54,6 @@ document.addEventListener("DOMContentLoaded", () => {
   let activeCampaign = null;
   let activeMission = null;
 
-  // Initialize Game with Fallback
   let game = null;
   function getOrInitGame() {
     if (!game && typeof FPSGameEngine !== "undefined" && typeof THREE !== "undefined") {
@@ -74,7 +71,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function wireGameCallbacks() {
     if (!game) return;
-    game.onCutsceneFinish = skipCutscene;
 
     game.onKillThreat = (id, subject, neutralized, total) => {
       const item = document.createElement("div");
@@ -124,35 +120,6 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  // FAIL-SAFE UNCONDITIONAL SKIP FUNCTION (UNSTICKS THE SCREEN 100%)
-  function skipCutscene() {
-    if (cutsceneOverlay) cutsceneOverlay.classList.add("hidden");
-    if (pointerlockOverlay) pointerlockOverlay.classList.remove("hidden");
-    if (tacticalHud) tacticalHud.classList.remove("hidden");
-
-    const g = getOrInitGame();
-    if (g) {
-      g.isCutscene = false;
-      g.camera.position.set(0, 1.7, 12);
-      if (g.weaponRig) g.weaponRig.position.copy(g.hipPos);
-    }
-  }
-
-  if (btnSkipCutscene) {
-    btnSkipCutscene.addEventListener("click", (e) => {
-      e.preventDefault();
-      skipCutscene();
-    });
-  }
-
-  window.addEventListener("keydown", (e) => {
-    if (e.code === "Space" && cutsceneOverlay && !cutsceneOverlay.classList.contains("hidden")) {
-      e.preventDefault();
-      skipCutscene();
-    }
-  });
-
-  // DIFFICULTY SELECTOR
   function setDifficulty(diff) {
     selectedDifficulty = (diff || "veteran").toLowerCase();
     document.querySelectorAll(".diff-btn").forEach(btn => {
@@ -272,7 +239,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // DEPLOY TO 3D BUNKER (WITH AUTOMATIC 4.5S FAILSAFE TIMEOUT)
+  // INSTANT INGRESS: DEPLOY STRAIGHT INTO 3D GAMEPLAY (ZERO DELAY / ZERO HANG)
   if (btnDeploy) {
     btnDeploy.addEventListener("click", () => {
       if (window.soundEngine) {
@@ -280,19 +247,19 @@ document.addEventListener("DOMContentLoaded", () => {
         window.soundEngine.startBunkerAmbience();
       }
       screenBriefing.classList.add("hidden");
-      cutsceneOverlay.classList.remove("hidden");
+
+      // SHOW HUD & POINTER LOCK IMMEDIATELY
+      if (pointerlockOverlay) pointerlockOverlay.classList.remove("hidden");
+      if (tacticalHud) tacticalHud.classList.remove("hidden");
 
       const g = getOrInitGame();
       if (g) {
         g.loadSession(currentSession.threats || [], selectedDifficulty);
         if (hudCallsign) hudCallsign.textContent = currentSession.callsign;
-        g.playCutscene();
+        g.camera.position.set(0, 1.7, 12);
+        if (g.weaponRig) g.weaponRig.position.copy(g.hipPos);
+        g.render();
       }
-
-      // AUTOMATIC SAFETY TIMER: Guarantees screen is never stuck on black
-      setTimeout(() => {
-        skipCutscene();
-      }, 4500);
     });
   }
 
@@ -313,7 +280,6 @@ document.addEventListener("DOMContentLoaded", () => {
     } else {
       g.isLocked = false;
       if (modalDebrief && !modalDebrief.classList.contains("hidden")) return;
-      if (g.isCutscene) return;
       if (pointerlockOverlay) pointerlockOverlay.classList.remove("hidden");
     }
   });

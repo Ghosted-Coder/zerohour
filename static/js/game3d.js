@@ -1,9 +1,6 @@
 /**
  * ZEROHOUR 3D FIRST-PERSON SHOOTER ENGINE
- * Updates:
- *  - Explicit Scene Background (0x0e131d) to eliminate black void
- *  - Pure AABB mathematical collision boxes (zero matrix sync dependency)
- *  - Fail-safe Cutscene state machine
+ * Direct Spawn Architecture: Eliminates cutscene hang & forces immediate 3D rendering
  */
 class FPSGameEngine {
   constructor(canvasId, sound) {
@@ -13,10 +10,6 @@ class FPSGameEngine {
     this.scene = null;
     this.camera = null;
     this.renderer = null;
-
-    this.isCutscene = false;
-    this.cutsceneTime = 0;
-    this.cutsceneDuration = 4.2;
 
     this.player = {
       position: new THREE.Vector3(0, 1.7, 12),
@@ -56,20 +49,16 @@ class FPSGameEngine {
     this.hipPos = new THREE.Vector3(0.2, -0.22, -0.45);
     this.adsPos = new THREE.Vector3(0.0, -0.07, -0.28);
     this.recoilOffset = 0;
-    this.cockAnimOffset = 0;
 
     this.threats = [];
     this.enemies = [];
     this.boss = null;
     this.bossSpawned = false;
-    this.bossIntroTimer = 0;
-    this.bossIntroActive = false;
     this.wallBoxes = [];
     this.shockwaves = [];
 
     this.onKillThreat = null;
     this.onMissionEnd = null;
-    this.onCutsceneFinish = null;
 
     this.lastTime = performance.now();
     this.initThree();
@@ -78,23 +67,22 @@ class FPSGameEngine {
 
   initThree() {
     this.scene = new THREE.Scene();
-    // EXPLICIT VISIBLE BACKGROUND
-    this.scene.background = new THREE.Color(0x0e131d);
-    this.scene.fog = new THREE.FogExp2(0x0e131d, 0.012);
+    this.scene.background = new THREE.Color(0x1a2436); // High-contrast blue-gray ambient bunker
+    this.scene.fog = new THREE.FogExp2(0x1a2436, 0.012);
 
     this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 180);
     this.camera.rotation.order = 'YXZ';
-    this.camera.position.set(0, 4.5, 26);
-    this.camera.lookAt(0, 1.8, -10);
+    this.camera.position.set(0, 1.7, 12);
 
     this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true, powerPreference: "high-performance" });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-    const ambientLight = new THREE.AmbientLight(0x7088aa, 1.6);
+    // BRIGHT CINEMATIC LIGHTING
+    const ambientLight = new THREE.AmbientLight(0xffffff, 2.0);
     this.scene.add(ambientLight);
 
-    const hemiLight = new THREE.HemisphereLight(0x94b3db, 0x161b24, 1.4);
+    const hemiLight = new THREE.HemisphereLight(0xb0c4de, 0x1b2330, 1.4);
     this.scene.add(hemiLight);
 
     const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
@@ -188,23 +176,22 @@ class FPSGameEngine {
     this.wallBoxes = [];
 
     const floorGeo = new THREE.PlaneGeometry(90, 90);
-    const floorMat = new THREE.MeshStandardMaterial({ color: 0x18202c, roughness: 0.4, metalness: 0.45 });
+    const floorMat = new THREE.MeshStandardMaterial({ color: 0x222c3c, roughness: 0.4, metalness: 0.45 });
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
     this.scene.add(floor);
 
     const ceilGeo = new THREE.PlaneGeometry(90, 90);
-    const ceil = new THREE.Mesh(ceilGeo, new THREE.MeshStandardMaterial({ color: 0x111622, roughness: 0.8 }));
+    const ceil = new THREE.Mesh(ceilGeo, new THREE.MeshStandardMaterial({ color: 0x18202d, roughness: 0.8 }));
     ceil.rotation.x = Math.PI / 2;
     ceil.position.y = 5.2;
     this.scene.add(ceil);
 
     const addWall = (x, z, w, d, h = 5.2) => {
-      const wallMat = new THREE.MeshStandardMaterial({ color: 0x243042, roughness: 0.35, metalness: 0.5 });
+      const wallMat = new THREE.MeshStandardMaterial({ color: 0x2b394d, roughness: 0.35, metalness: 0.5 });
       const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
       wall.position.set(x, h / 2, z);
       this.scene.add(wall);
-      // Mathematical AABB (independent of matrix ticks)
       this.wallBoxes.push({
         min: { x: x - w / 2, z: z - d / 2 },
         max: { x: x + w / 2, z: z + d / 2 }
@@ -237,14 +224,14 @@ class FPSGameEngine {
     fixture.position.set(x, 5.1, z);
     this.scene.add(fixture);
 
-    const light = new THREE.PointLight(0xe2e8f0, 2.0, 26, 1.2);
+    const light = new THREE.PointLight(0xe2e8f0, 2.2, 28, 1.2);
     light.position.set(x, 4.6, z);
     this.scene.add(light);
   }
 
   spawnServerRack(x, z) {
     const rackGeo = new THREE.BoxGeometry(3.5, 4.4, 1.4);
-    const rack = new THREE.Mesh(rackGeo, new THREE.MeshStandardMaterial({ color: 0x161c28, roughness: 0.4, metalness: 0.6 }));
+    const rack = new THREE.Mesh(rackGeo, new THREE.MeshStandardMaterial({ color: 0x1f2735, roughness: 0.4, metalness: 0.6 }));
     rack.position.set(x, 2.2, z);
     this.scene.add(rack);
     this.wallBoxes.push({
@@ -252,7 +239,7 @@ class FPSGameEngine {
       max: { x: x + 1.75, z: z + 0.7 }
     });
 
-    const ledMatA = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const ledMatA = new THREE.MeshBasicMaterial({ color: 0x00ffcc });
     const ledMatB = new THREE.MeshBasicMaterial({ color: 0xff3344 });
     for (let ly = 1.0; ly < 4.0; ly += 0.4) {
       const led = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.05, 0.02), Math.random() > 0.4 ? ledMatA : ledMatB);
@@ -281,7 +268,6 @@ class FPSGameEngine {
   setupControls() {
     window.addEventListener("keydown", (e) => {
       if (this.sound) this.sound.init();
-      if (this.isCutscene) return;
       const k = e.key.toLowerCase();
       if (k === "w") this.keys.w = true;
       if (k === "a") this.keys.a = true;
@@ -310,7 +296,7 @@ class FPSGameEngine {
     });
 
     window.addEventListener("mousemove", (e) => {
-      if (!this.isLocked || this.isCutscene) return;
+      if (!this.isLocked) return;
       const sensitivity = 0.002;
       this.yaw -= e.movementX * sensitivity;
       this.pitch -= e.movementY * sensitivity;
@@ -321,7 +307,7 @@ class FPSGameEngine {
 
     window.addEventListener("mousedown", (e) => {
       if (this.sound) this.sound.init();
-      if (!this.isLocked || this.isCutscene) return;
+      if (!this.isLocked) return;
       if (e.button === 0) {
         this.mouse.left = true;
         this.shoot();
@@ -335,19 +321,6 @@ class FPSGameEngine {
     });
 
     window.addEventListener("contextmenu", (e) => e.preventDefault());
-  }
-
-  playCutscene() {
-    this.isCutscene = true;
-    this.cutsceneTime = 0;
-    this.player.position.set(0, 1.7, 12);
-    this.camera.position.set(0, 4.6, 26);
-    this.camera.lookAt(0, 1.8, -10);
-
-    setTimeout(() => {
-      if (this.sound) this.sound.playCockWeapon();
-      this.cockAnimOffset = 0.15;
-    }, 2400);
   }
 
   triggerSlide() {
@@ -379,7 +352,6 @@ class FPSGameEngine {
       this.boss = null;
     }
     this.bossSpawned = false;
-    this.bossIntroActive = false;
 
     const targetCounts = { recruit: 16, veteran: 24, elite: 32 };
     const requiredNum = targetCounts[this.difficulty] || 24;
@@ -458,6 +430,12 @@ class FPSGameEngine {
     vest.position.y = 1.15 * scale;
     group.add(vest);
 
+    for (let p = -0.16; p <= 0.16; p += 0.16) {
+      const pouch = new THREE.Mesh(new THREE.BoxGeometry(0.12 * scale, 0.19 * scale, 0.09 * scale), armorPlateMat);
+      pouch.position.set(p * scale, 1.05 * scale, 0.22 * scale);
+      group.add(pouch);
+    }
+
     const head = new THREE.Mesh(new THREE.SphereGeometry(0.2 * scale, 16, 16), skinMat);
     head.position.y = 1.64 * scale;
     group.add(head);
@@ -469,6 +447,13 @@ class FPSGameEngine {
     const visorCenter = new THREE.Mesh(new THREE.BoxGeometry(0.28 * scale, 0.08 * scale, 0.12 * scale), new THREE.MeshBasicMaterial({ color: visorColor }));
     visorCenter.position.set(0, 1.65 * scale, 0.18 * scale);
     group.add(visorCenter);
+
+    for (let t = -0.1; t <= 0.1; t += 0.065) {
+      const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.02 * scale, 0.02 * scale, 0.1 * scale, 8), new THREE.MeshBasicMaterial({ color: visorColor }));
+      tube.rotation.x = Math.PI / 2;
+      tube.position.set(t * scale, 1.65 * scale, 0.24 * scale);
+      group.add(tube);
+    }
 
     const bladeArm = new THREE.Mesh(new THREE.BoxGeometry(0.08 * scale, 0.09 * scale, 0.72 * scale), meleeWeaponMat);
     bladeArm.position.set(0.26 * scale, 1.05 * scale, 0.32 * scale);
@@ -491,8 +476,6 @@ class FPSGameEngine {
   spawnBoss() {
     if (this.bossSpawned) return;
     this.bossSpawned = true;
-    this.bossIntroActive = true;
-    this.bossIntroTimer = 2.5;
 
     if (this.sound) {
       this.sound.playBossAlert();
@@ -500,7 +483,7 @@ class FPSGameEngine {
     }
 
     const bossMesh = this.createSoldierMesh("phishing", true);
-    bossMesh.position.set(0, 8.0, -25);
+    bossMesh.position.set(0, 0, -25);
     this.scene.add(bossMesh);
 
     this.boss = {
@@ -650,25 +633,6 @@ class FPSGameEngine {
   update(dt) {
     const now = performance.now() / 1000;
 
-    if (this.isCutscene) {
-      this.cutsceneTime += dt;
-      const progress = Math.min(this.cutsceneTime / this.cutsceneDuration, 1.0);
-      const t = progress * progress * (3 - 2 * progress);
-      this.camera.position.set(0, 4.5 - t * 2.8, 26 - t * 14);
-      this.camera.lookAt(0, 1.7, -10 + t * 5);
-
-      this.cockAnimOffset *= 0.85;
-      if (this.weaponRig) {
-        this.weaponRig.position.set(0.2, -0.22 - this.cockAnimOffset, -0.45 + this.cockAnimOffset);
-      }
-
-      if (progress >= 1.0) {
-        this.isCutscene = false;
-        if (this.onCutsceneFinish) this.onCutsceneFinish();
-      }
-      return;
-    }
-
     if (!this.isLocked) return;
 
     if (this.mouse.left && !this.player.isReloading) {
@@ -743,21 +707,6 @@ class FPSGameEngine {
       this.weaponRig.rotation.z += (targetRoll - this.weaponRig.rotation.z) * 10 * dt;
     }
 
-    if (this.boss && this.bossIntroActive) {
-      this.bossIntroTimer -= dt;
-      if (this.boss.mesh.position.y > 0) {
-        this.boss.mesh.position.y -= 14 * dt;
-      } else {
-        this.boss.mesh.position.y = 0;
-        if (this.bossIntroActive) {
-          this.bossIntroActive = false;
-          if (this.sound) this.sound.playBossSlam();
-          this.createShockwave(this.boss.mesh.position);
-          this.showDamageVignette();
-        }
-      }
-    }
-
     for (let s = this.shockwaves.length - 1; s >= 0; s--) {
       const sw = this.shockwaves[s];
       sw.scale += 14 * dt;
@@ -794,7 +743,7 @@ class FPSGameEngine {
       const attackRange = en.isBoss ? 3.5 : 2.2;
       const collisionRadius = en.isBoss ? 1.4 : 0.6;
 
-      if (dist > attackRange && !this.bossIntroActive) {
+      if (dist > attackRange) {
         const toPlayer = new THREE.Vector3().subVectors(this.player.position, en.mesh.position).normalize();
         toPlayer.y = 0;
         const currentSpeed = en.isBoss ? 2.8 : baseChaseSpeed;
@@ -826,7 +775,7 @@ class FPSGameEngine {
             en.mesh.position.z = detZ;
           }
         }
-      } else if (!this.bossIntroActive) {
+      } else {
         if (timeMs - en.lastAttack > (en.isBoss ? 1800 : 1100)) {
           en.lastAttack = timeMs;
 
