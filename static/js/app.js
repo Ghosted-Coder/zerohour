@@ -1,6 +1,7 @@
 document.addEventListener("DOMContentLoaded", () => {
   const screenMenu = document.getElementById("screen-menu");
   const screenBriefing = document.getElementById("screen-briefing");
+  const cutsceneOverlay = document.getElementById("cutscene-overlay");
   const pointerlockOverlay = document.getElementById("pointerlock-overlay");
   const tacticalHud = document.getElementById("tactical-hud");
   const modalDebrief = document.getElementById("modal-debrief");
@@ -13,6 +14,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnRnd = document.getElementById("btn-rnd-callsign");
 
   const metaCallsign = document.getElementById("meta-callsign");
+  const telCallsign = document.getElementById("tel-callsign");
   const btnBackMenu = document.getElementById("btn-back-menu");
   const btnDeploy = document.getElementById("btn-deploy");
 
@@ -37,7 +39,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const game = new FPSGameEngine("fps-canvas", window.soundEngine);
   game.start();
 
-  const CALLSIGNS = ["GHOST-1", "BRAVO-SIX", "SOAP-01", "ROACH", "WAR-PIG", "VIPER"];
+  const CALLSIGNS = ["BRAVO-SIX", "GHOST-1", "SOAP-01", "ROACH", "WAR-PIG", "VIPER"];
   btnRnd.addEventListener("click", () => {
     inputCallsign.value = CALLSIGNS[Math.floor(Math.random() * CALLSIGNS.length)];
     errCallsign.textContent = "";
@@ -77,6 +79,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     metaCallsign.textContent = currentSession.callsign;
+    telCallsign.textContent = currentSession.callsign;
     screenMenu.classList.add("hidden");
     screenBriefing.classList.remove("hidden");
   });
@@ -86,18 +89,26 @@ document.addEventListener("DOMContentLoaded", () => {
     screenMenu.classList.remove("hidden");
   });
 
-  // 2. DEPLOY INTO 3D FPS
+  // 2. TRIGGER CUTSCENE ON DEPLOY
   btnDeploy.addEventListener("click", () => {
     screenBriefing.classList.add("hidden");
-    pointerlockOverlay.classList.remove("hidden");
-    tacticalHud.classList.remove("hidden");
+    cutsceneOverlay.classList.remove("hidden");
 
     game.loadSession(currentSession.threats);
     hudCallsign.textContent = currentSession.callsign;
     hudObjective.textContent = `PURGE DIGITAL THREAT NODES [ 0 / ${currentSession.threats.length} ]`;
+
+    // Start COD MW camera sweep and weapon chambering cutscene
+    game.playCutscene();
   });
 
-  // Engage Pointer Lock
+  // Cutscene finishes -> Hand over to Player Pointer Lock
+  game.onCutsceneFinish = () => {
+    cutsceneOverlay.classList.add("hidden");
+    pointerlockOverlay.classList.remove("hidden");
+    tacticalHud.classList.remove("hidden");
+  };
+
   pointerlockOverlay.addEventListener("click", () => {
     game.canvas.requestPointerLock();
   });
@@ -108,12 +119,12 @@ document.addEventListener("DOMContentLoaded", () => {
       pointerlockOverlay.classList.add("hidden");
     } else {
       game.isLocked = false;
-      if (!modalDebrief.classList.contains("hidden")) return;
+      if (!modalDebrief.classList.contains("hidden") || game.isCutscene) return;
       pointerlockOverlay.classList.remove("hidden");
     }
   });
 
-  // In-Game UI Updates
+  // Real-time HUD loop
   setInterval(() => {
     if (!game.isLocked) return;
     healthVal.textContent = Math.round(game.player.health);
@@ -126,9 +137,9 @@ document.addEventListener("DOMContentLoaded", () => {
     } else {
       crosshair.classList.remove("ads");
     }
-  }, 50);
+  }, 40);
 
-  // Killfeed Notification
+  // Killfeed
   game.onKillThreat = (id, subject, neutralized, total) => {
     hudObjective.textContent = `PURGE DIGITAL THREAT NODES [ ${neutralized} / ${total} ]`;
     const item = document.createElement("div");
@@ -144,7 +155,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }).catch(() => {});
   };
 
-  // 3. MISSION END (VICTORY / DEFEAT)
+  // 3. MISSION END
   game.onMissionEnd = (isVictory, stats) => {
     tacticalHud.classList.add("hidden");
     pointerlockOverlay.classList.add("hidden");
@@ -164,7 +175,7 @@ document.addEventListener("DOMContentLoaded", () => {
     modalDebrief.classList.remove("hidden");
   };
 
-  // Exports
+  // Honest Exports
   document.getElementById("btn-export-xml").addEventListener("click", () => {
     window.location.href = `/api/demo/session/${currentSession.session_id}/export/filters.xml`;
   });
@@ -174,12 +185,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
   btnRestart.addEventListener("click", () => {
     modalDebrief.classList.add("hidden");
-    pointerlockOverlay.classList.remove("hidden");
-    tacticalHud.classList.remove("hidden");
     game.player.health = 100;
     game.player.ammoClip = 30;
     game.player.ammoReserve = 120;
     game.loadSession(currentSession.threats);
+    btnDeploy.click();
   });
 
   btnReturnBriefing.addEventListener("click", () => {
