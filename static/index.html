@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ZEROHOUR // Alcatraz Open-World Tactical Infiltration</title>
-  <link rel="stylesheet" href="/static/css/style.css?v=20261103">
+  <link rel="stylesheet" href="/static/css/style.css?v=20261104">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -14,15 +14,14 @@
   <a href="#fps-canvas" class="skip-link">Skip to gameplay</a>
 
   <main id="main-content">
-    <!-- SCREEN 1: REGISTRATION -->
     <section id="screen-menu" class="overlay-screen active" aria-label="Operator Ingress Terminal">
       <div class="terminal-frame">
         <header class="terminal-badge">
           <span class="chrome-dot" aria-hidden="true"></span>
-          <span id="badge-auth-status">ALCATRAZ ISLAND // 4 ENEMY CLASSES</span>
+          <span id="badge-auth-status">ALCATRAZ ISLAND // SECTOR REBIRTH</span>
         </header>
         <h1 class="chrome-title">ZEROHOUR</h1>
-        <p class="chrome-subtitle">OPERATION DIGITAL RECKONING // 200 AMMO // OPEN CELLHOUSE</p>
+        <p class="chrome-subtitle">OPERATION DIGITAL RECKONING // OPEN-WORLD COMBAT</p>
         
         <form id="form-registration" class="terminal-form" onsubmit="return false;" novalidate>
           <div class="form-row">
@@ -81,7 +80,6 @@
       </div>
     </section>
 
-    <!-- SCREEN 2: BRIEFING -->
     <section id="screen-briefing" class="overlay-screen hidden" aria-label="Mission Briefing Dossier">
       <div class="terminal-frame briefing-frame">
         <header class="briefing-top">
@@ -97,7 +95,7 @@
         <div class="briefing-body">
           <article class="briefing-intel">
             <h3 id="mission-heading">HOSTILE COMBAT CLASSES DETECTED</h3>
-            <p id="mission-desc">4 enemy types identified in Alcatraz: Melee Swordsmen (20 dmg), Speed Stars (fast 10 dmg), Riflemen (30 dmg, dodge with SLIDE), and the 800 HP Stomping Boss.</p>
+            <p id="mission-desc">Riflemen are restricted by line of sight and must track you for 2 seconds before firing. Slide (C/Ctrl) to dodge their 30 dmg shot. Solid walls block all gunfire.</p>
             <div class="intel-bullet">
               <strong>TARGETED CLUTTER CLUSTERS:</strong>
               <ul id="mission-target-list" class="target-list">
@@ -127,7 +125,6 @@
     </section>
   </main>
 
-  <!-- SCREEN 3: 3D ALCATRAZ ISLAND -->
   <div id="game-container" role="main" aria-label="3D Gameplay Environment">
     <canvas id="fps-canvas" role="region" aria-label="3D Alcatraz Island Battleground" tabindex="0"></canvas>
 
@@ -136,7 +133,7 @@
         <div class="lock-icon" aria-hidden="true">🎯</div>
         <h3>ALCATRAZ INFILTRATION ARMED</h3>
         <p>CLICK TO ENGAGE POV COMBAT // 200 AMMO READY</p>
-        <small>[SLIDE TO DODGE SNIPERS] // [Q: EMP STUN] // [SWORD BOTS: 20 DMG]</small>
+        <small>[TAKE COVER BEHIND WALLS] // [SLIDE TO DODGE SNIPERS] // [Q: EMP STUN]</small>
       </div>
     </div>
 
@@ -151,6 +148,11 @@
       <!-- LAST 4 ENEMIES LOCATOR -->
       <div id="locator-banner" class="locator-banner hidden">
         <span>⚠️ TARGET LOCATOR ACTIVE: <strong id="nearest-target-dist">NEAREST: 35m</strong> ⚠️</span>
+      </div>
+
+      <!-- SNIPER LOCKING ON WARNING -->
+      <div id="sniper-warning" class="sniper-warning hidden">
+        <span>⚠️ SNIPER LOCKING ON! [SLIDE TO DODGE] ⚠️</span>
       </div>
 
       <!-- STUN WARNING OVERLAY -->
@@ -204,7 +206,6 @@
         </div>
       </div>
 
-      <!-- 200 AMMO DISPLAY -->
       <div class="hud-bottom-right">
         <div class="weapon-name">M4A1 CARBINE // 5.56 NATO [RED-DOT]</div>
         <div class="ammo-display" aria-label="Ammunition counter">
@@ -219,7 +220,6 @@
     </div>
   </div>
 
-  <!-- SCREEN 4: DEBRIEF -->
   <div id="modal-debrief" class="modal-backdrop hidden" role="dialog" aria-modal="true">
     <div class="terminal-frame modal-frame">
       <div class="modal-tag" id="debrief-tag">ALCATRAZ SECURED // CLEANUP PROPOSAL UNLOCKED</div>
@@ -268,8 +268,8 @@
     </div>
   </div>
 
-  <script src="/static/js/audio.js?v=20261103"></script>
-  <script src="/static/js/game3d.js?v=20261103"></script>
-  <script src="/static/js/app.js?v=20261103"></script>
+  <script src="/static/js/audio.js?v=20261104"></script>
+  <script src="/static/js/game3d.js?v=20261104"></script>
+  <script src="/static/js/app.js?v=20261104"></script>
 </body>
 </html>

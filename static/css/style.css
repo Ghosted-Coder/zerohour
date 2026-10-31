@@ -756,3 +756,21 @@ kbd { background: #1e293b; border: 1px solid var(--chrome-silver); color: #fff; 
   animation: pulse 0.5s infinite alternate;
 }
 .stun-banner.hidden { display: none !important; }
+
+/* SNIPER LOCKING ON WARNING */
+.sniper-warning {
+  position: absolute;
+  top: 104px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 170, 0, 0.95);
+  border: 2px solid #ffffff;
+  padding: 6px 20px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #0b0e14;
+  box-shadow: 0 0 20px rgba(255, 170, 0, 0.8);
+  letter-spacing: 1.5px;
+  animation: pulse 0.35s infinite alternate;
+}
+.sniper-warning.hidden { display: none !important; }

@@ -1,14 +1,14 @@
 /**
  * ZEROHOUR 3D FIRST-PERSON SHOOTER ENGINE (ALCATRAZ ISLAND OPEN-WORLD)
- * Features:
- *  - Unblocked Cellhouse Entry (Roof excluded from 2D collision so you can enter freely)
- *  - 4 Unique Enemy Classes:
- *      1. Melee Swordsman: 20 dmg/swing, 80 HP, 4.0 m/s
- *      2. Speed Star: Fast 7.2 m/s, 10 dmg punch, 55 HP
- *      3. Rifleman: Shoots every 5s, 30 dmg, DODGEABLE WITH SLIDE (C/Ctrl)
- *      4. Cyber-Juggernaut Boss: 800 HP (10x melee), 4.0 m/s, Stomp Attack (5-sec player stun)
- *  - 200 Starting Ammo in all difficulties
- *  - Last 4 Targets Beacon & Distance Locator
+ * Upgrades:
+ *  - Continuous Penetration Physics (resolveBoxCollision: NO ENEMY OR PLAYER PHASING)
+ *  - Raycast Line-of-Sight: Walls block bullets and enemy vision
+ *  - Rifleman 2-Second Aim Timer & Dodge Window:
+ *      * Max range 35m
+ *      * Must see player continuously for 2.0s before firing
+ *      * Firing can be dodged with SLIDE (C / Ctrl)
+ *  - Procedural Weathered Concrete & Metal Alcatraz Map Textures
+ *  - 800 HP Stomp Boss (5s player stun) & 200 Starting Ammo
  */
 class FPSGameEngine {
   constructor(canvasId, sound) {
@@ -25,7 +25,7 @@ class FPSGameEngine {
       health: 100,
       maxHealth: 100,
       ammoClip: 30,
-      ammoReserve: 200, // 200 AMMO IN EVERY DIFFICULTY
+      ammoReserve: 200,
       isSprinting: false,
       isADS: false,
       isReloading: false,
@@ -115,6 +115,7 @@ class FPSGameEngine {
     });
   }
 
+  // 4 DYNAMIC WEATHER RIGS
   applyWeather(type) {
     this.weatherType = type;
     if (this.weatherParticles) {
@@ -219,7 +220,7 @@ class FPSGameEngine {
     this.scene.add(this.weatherParticles);
   }
 
-  // ALCATRAZ MAP WITH UNBLOCKED CELLHOUSE ENTRY (ROOF EXCLUDED FROM 2D COLLISION)
+  // ALCATRAZ OPEN-WORLD MAP WITH PHYSICAL THICK WALLS & ARCHWAYS
   buildAlcatrazMap() {
     this.wallBoxes = [];
     this.searchlights = [];
@@ -233,12 +234,12 @@ class FPSGameEngine {
     island.rotation.x = -Math.PI / 2;
     this.scene.add(island);
 
-    const addBoxObstacle = (x, z, w, d, h, color = 0x242e3c, isRoof = false) => {
-      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshStandardMaterial({ color, roughness: 0.5, metalness: 0.4 }));
+    const addBoxObstacle = (x, z, w, d, h, color = 0x2b384a, isRoof = false) => {
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshStandardMaterial({ color, roughness: 0.6, metalness: 0.3 }));
       mesh.position.set(x, isRoof ? 10 : h / 2, z);
       this.scene.add(mesh);
 
-      // ONLY ADD SOLID WALLS TO COLLISION BOXES! (NEVER ADD ROOF SO PLAYERS CAN FREELY ENTER)
+      // Add to solid collision list
       if (!isRoof) {
         this.wallBoxes.push({
           min: { x: x - w / 2, z: z - d / 2 },
@@ -248,32 +249,29 @@ class FPSGameEngine {
       return mesh;
     };
 
-    // South Entrance Archway: x=[-4, 4] is wide open (x=0 z=30 is open!)
-    addBoxObstacle(-11, 30, 14, 2, 10);
-    addBoxObstacle(11, 30, 14, 2, 10);
+    // CELLHOUSE WALLS WITH 8M WIDE ARCHWAYS (North, South, East, West)
+    addBoxObstacle(-11, 30, 14, 3, 10); // South wall west
+    addBoxObstacle(11, 30, 14, 3, 10);  // South wall east (x=[-4, 4] is open archway)
 
-    // North Entrance Archway: x=[-4, 4] is wide open
-    addBoxObstacle(-11, -30, 14, 2, 10);
-    addBoxObstacle(11, -30, 14, 2, 10);
+    addBoxObstacle(-11, -30, 14, 3, 10); // North wall west
+    addBoxObstacle(11, -30, 14, 3, 10);  // North wall east (x=[-4, 4] is open archway)
 
-    // West Wall with 8m Archway
-    addBoxObstacle(-18, -17, 2, 26, 10);
-    addBoxObstacle(-18, 17, 2, 26, 10);
+    addBoxObstacle(-18, -17, 3, 26, 10); // West wall north
+    addBoxObstacle(-18, 17, 3, 26, 10);  // West wall south (z=[-4, 4] is open archway)
 
-    // East Wall with 8m Archway
-    addBoxObstacle(18, -17, 2, 26, 10);
-    addBoxObstacle(18, 17, 2, 26, 10);
+    addBoxObstacle(18, -17, 3, 26, 10);  // East wall north
+    addBoxObstacle(18, 17, 3, 26, 10);   // East wall south (z=[-4, 4] is open archway)
 
-    // ROOF IS EXCLUDED FROM 2D COLLISION BOXES
-    addBoxObstacle(0, 0, 38, 62, 0.6, 0x121720, true);
+    // Cellhouse Roof (Exempt from 2D collision so players enter freely)
+    addBoxObstacle(0, 0, 39, 63, 0.8, 0x141a24, true);
 
-    // Interior Server Racks with wide 8m central corridor
+    // Interior Server Racks
     for (let sz = -18; sz <= 18; sz += 9) {
-      addBoxObstacle(-12, sz, 3, 1.4, 4.5, 0x161c28);
-      addBoxObstacle(12, sz, 3, 1.4, 4.5, 0x161c28);
+      addBoxObstacle(-12, sz, 3, 1.8, 4.5, 0x161c28);
+      addBoxObstacle(12, sz, 3, 1.8, 4.5, 0x161c28);
     }
 
-    // 4 Corner Watchtowers
+    // 4 Corner Guard Towers
     [[-65, -65], [65, -65], [-65, 65], [65, 65]].forEach(([tx, tz]) => {
       addBoxObstacle(tx, tz, 6, 6, 14, 0x222a36);
       const spot = new THREE.SpotLight(0xffffff, 3.5, 85, Math.PI / 6, 0.4, 1.2);
@@ -287,13 +285,13 @@ class FPSGameEngine {
     });
 
     // Courtyard Perimeter Barricades
-    addBoxObstacle(-35, 20, 1.2, 30, 2.5, 0x334155);
-    addBoxObstacle(35, 20, 1.2, 30, 2.5, 0x334155);
-    addBoxObstacle(0, 65, 45, 1.2, 2.5, 0x334155);
+    addBoxObstacle(-35, 20, 2.0, 30, 2.5, 0x334155);
+    addBoxObstacle(35, 20, 2.0, 30, 2.5, 0x334155);
+    addBoxObstacle(0, 65, 45, 2.0, 2.5, 0x334155);
 
     for (let b = -40; b <= 40; b += 20) {
       if (Math.abs(b) < 10) continue;
-      addBoxObstacle(b, 48, 3.5, 1.4, 1.5, 0x475569);
+      addBoxObstacle(b, 48, 3.5, 2.0, 1.5, 0x475569);
     }
   }
 
@@ -369,21 +367,52 @@ class FPSGameEngine {
     this.scene.add(this.camera);
   }
 
-  checkObstacleCollision(posX, posZ, radius = 0.55) {
-    const checkMinX = posX - radius;
-    const checkMaxX = posX + radius;
-    const checkMinZ = posZ - radius;
-    const checkMaxZ = posZ + radius;
+  // 1. ANTI-PHASING CONTINUOUS PENETRATION RESOLVER
+  resolveBoxCollision(pos, radius = 0.6) {
+    for (let i = 0; i < this.wallBoxes.length; i++) {
+      const b = this.wallBoxes[i];
+      if (pos.x + radius > b.min.x && pos.x - radius < b.max.x &&
+          pos.z + radius > b.min.z && pos.z - radius < b.max.z) {
+        
+        // Push out along minimum overlap axis immediately
+        const pushLeft = (pos.x + radius) - b.min.x;
+        const pushRight = b.max.x - (pos.x - radius);
+        const pushTop = (pos.z + radius) - b.min.z;
+        const pushBottom = b.max.z - (pos.z - radius);
+        const minOverlap = Math.min(pushLeft, pushRight, pushTop, pushBottom);
+
+        if (minOverlap === pushLeft) pos.x = b.min.x - radius - 0.02;
+        else if (minOverlap === pushRight) pos.x = b.max.x + radius + 0.02;
+        else if (minOverlap === pushTop) pos.z = b.min.z - radius - 0.02;
+        else if (minOverlap === pushBottom) pos.z = b.max.z + radius + 0.02;
+      }
+    }
+    // Perimeter boundaries
+    if (pos.x < -110) pos.x = -110;
+    if (pos.x > 110) pos.x = 110;
+    if (pos.z < -110) pos.z = -110;
+    if (pos.z > 110) pos.z = 110;
+  }
+
+  // 2. RAYCAST LINE-OF-SIGHT (WALLS BLOCK SNIPER BULLETS & VISION)
+  hasLineOfSight(posA, posB) {
+    const dir = new THREE.Vector3().subVectors(posB, posA);
+    const dist = dir.length();
+    dir.normalize();
+    const ray = new THREE.Ray(posA, dir);
 
     for (let i = 0; i < this.wallBoxes.length; i++) {
       const b = this.wallBoxes[i];
-      if (checkMaxX > b.min.x && checkMinX < b.max.x &&
-          checkMaxZ > b.min.z && checkMinZ < b.max.z) {
-        return true;
+      const box3 = new THREE.Box3(
+        new THREE.Vector3(b.min.x, 0, b.min.z),
+        new THREE.Vector3(b.max.x, 10, b.max.z)
+      );
+      const hit = ray.intersectBox(box3, new THREE.Vector3());
+      if (hit && posA.distanceTo(hit) < dist - 0.8) {
+        return false; // Solid obstacle blocks the path!
       }
     }
-    if (posX < -110 || posX > 110 || posZ < -110 || posZ > 110) return true;
-    return false;
+    return true;
   }
 
   setupControls() {
@@ -516,7 +545,7 @@ class FPSGameEngine {
     }
     this.bossSpawned = false;
 
-    // Reset 200 starting ammo
+    // 200 AMMO IN EVERY DIFFICULTY
     this.player.ammoClip = 30;
     this.player.ammoReserve = 200;
     this.player.isStunned = false;
@@ -538,32 +567,24 @@ class FPSGameEngine {
     }
 
     this.totalThreatsCount = this.threats.length;
-
-    // CREATE 4 ENEMY CLASSES: 1. Melee (Sword), 2. Speed Star, 3. Rifleman (Sniper), 4. Boss
     const enemyTypes = ["melee", "speed", "rifleman"];
 
     this.threats.forEach((th, i) => {
       const enemyClass = enemyTypes[i % 3];
       const angle = (i / this.threats.length) * Math.PI * 2;
-      const radius = 20 + ((i * 9) % 55);
+      const radius = 22 + ((i * 9) % 55);
       let ex = Math.cos(angle) * radius;
       let ez = Math.sin(angle) * radius;
 
-      let attempts = 0;
-      while (this.checkObstacleCollision(ex, ez, 0.7) && attempts < 10) {
-        ex += (Math.random() - 0.5) * 6;
-        ez += (Math.random() - 0.5) * 6;
-        attempts++;
-      }
+      // Anti-wall spawn placement
+      const pos = new THREE.Vector3(ex, 0, ez);
+      this.resolveBoxCollision(pos, 0.8);
+      ex = pos.x; ez = pos.z;
 
       const enemyMesh = this.createEnemyMeshByClass(enemyClass, false);
       enemyMesh.position.set(ex, 0, ez);
       this.scene.add(enemyMesh);
 
-      // CLASS STATS:
-      // Melee: 80 HP, 4.0 m/s, 20 dmg
-      // Speed: 55 HP, 7.2 m/s, 10 dmg
-      // Rifleman: 70 HP, 3.0 m/s, 30 dmg (dodgeable with slide)
       const hp = enemyClass === "speed" ? 55 : (enemyClass === "rifleman" ? 70 : 80);
 
       this.enemies.push({
@@ -577,8 +598,10 @@ class FPSGameEngine {
         isBoss: false,
         isStunned: false,
         stunTimer: 0,
+        aimTimer: 0, // 2-second continuous tracking requirement!
+        isAiming: false,
         lastAttack: 0,
-        lastRifleShot: performance.now() + Math.random() * 3000,
+        lastRifleShot: 0,
         threatLevel: th.threat_level || 3
       });
     });
@@ -665,17 +688,17 @@ class FPSGameEngine {
           ctx.strokeStyle = "#ffffff";
           ctx.stroke();
         } else if (en.enemyClass === "rifleman") {
-          ctx.fillStyle = "#ffaa00"; // Orange blip for riflemen
+          ctx.fillStyle = "#ffaa00";
           ctx.beginPath();
           ctx.arc(rx, ry, 3.5, 0, Math.PI * 2);
           ctx.fill();
         } else if (en.enemyClass === "speed") {
-          ctx.fillStyle = "#00d4ff"; // Cyan blip for speedsters
+          ctx.fillStyle = "#00d4ff";
           ctx.beginPath();
           ctx.arc(rx, ry, 3, 0, Math.PI * 2);
           ctx.fill();
         } else {
-          ctx.fillStyle = "#ff3344"; // Red blip for swordsmen
+          ctx.fillStyle = "#ff3344";
           ctx.beginPath();
           ctx.arc(rx, ry, 3, 0, Math.PI * 2);
           ctx.fill();
@@ -697,7 +720,6 @@ class FPSGameEngine {
     ctx.restore();
   }
 
-  // 4 DIFFERENT VISUAL MODELS: 1. Melee (Sword), 2. Speed Star (Gauntlets), 3. Rifleman (Sniper), 4. Boss
   createEnemyMeshByClass(enemyClass, isBoss = false) {
     const group = new THREE.Group();
     const scale = isBoss ? 2.3 : 1.0;
@@ -732,38 +754,35 @@ class FPSGameEngine {
     visor.position.set(0, 1.65 * scale, 0.18 * scale);
     group.add(visor);
 
-    // CLASS SPECIFIC WEAPON IN HAND
     let weaponMesh = null;
+    let laserMesh = null;
+
     if (isBoss) {
-      // 4. JUGGERNAUT SPIKED HYDRAULIC ARM
       weaponMesh = new THREE.Mesh(new THREE.BoxGeometry(0.12 * scale, 0.12 * scale, 0.85 * scale), steelMat);
       weaponMesh.position.set(0.3 * scale, 1.05 * scale, 0.35 * scale);
       weaponMesh.rotation.x = 0.35;
     } else if (enemyClass === "melee") {
-      // 1. TACTICAL CYBER SWORD
       weaponMesh = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.08, 0.8), new THREE.MeshStandardMaterial({ color: 0x00ffcc, metalness: 0.9 }));
       weaponMesh.position.set(0.26, 1.05, 0.35);
       weaponMesh.rotation.x = 0.35;
     } else if (enemyClass === "speed") {
-      // 2. COMBAT GAUNTLETS (PUNCHING HANDS)
       weaponMesh = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.14, 0.18), new THREE.MeshStandardMaterial({ color: 0x00d4ff, metalness: 0.8 }));
       weaponMesh.position.set(0.25, 1.05, 0.22);
     } else if (enemyClass === "rifleman") {
-      // 3. SNIPER / PRECISION RIFLE WITH RED LASER
       weaponMesh = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.1, 0.95), new THREE.MeshStandardMaterial({ color: 0x111111, metalness: 0.9 }));
       weaponMesh.position.set(0.25, 1.1, 0.4);
 
-      // Red Laser Sight Beam
+      // RED LASER TARGETING BEAM
       const laserGeo = new THREE.CylinderGeometry(0.008, 0.008, 18, 6);
-      const laserMat = new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0.6 });
-      const laser = new THREE.Mesh(laserGeo, laserMat);
-      laser.rotation.x = Math.PI / 2;
-      laser.position.set(0, 0.04, 9.0);
-      weaponMesh.add(laser);
+      const laserMat = new THREE.MeshBasicMaterial({ color: 0xffaa00, transparent: true, opacity: 0.5 });
+      laserMesh = new THREE.Mesh(laserGeo, laserMat);
+      laserMesh.rotation.x = Math.PI / 2;
+      laserMesh.position.set(0, 0.04, 9.0);
+      laserMesh.visible = false;
+      weaponMesh.add(laserMesh);
     }
     group.add(weaponMesh);
 
-    // BEACON FOR LAST 4 TARGETS
     const beaconGeo = new THREE.CylinderGeometry(0.05, 0.05, 6.0, 8);
     const beaconMat = new THREE.MeshBasicMaterial({ color: 0x00ffcc, transparent: true, opacity: 0.7 });
     const beacon = new THREE.Mesh(beaconGeo, beaconMat);
@@ -780,11 +799,11 @@ class FPSGameEngine {
     rightLeg.position.set(0.16 * scale, 0.38 * scale, 0);
     group.add(rightLeg);
 
-    group.userData = { leftLeg, rightLeg, weaponMesh, beacon, animPhase: Math.random() * Math.PI, isBoss, enemyClass };
+    group.userData = { leftLeg, rightLeg, weaponMesh, laser: laserMesh, beacon, animPhase: Math.random() * Math.PI, isBoss, enemyClass };
     return group;
   }
 
-  // 4. SPAWN 800 HP JUGGERNAUT BOSS (10X MELEE HEALTH)
+  // 800 HP JUGGERNAUT BOSS (10X MELEE HEALTH)
   spawnBoss() {
     if (this.bossSpawned) return;
     this.bossSpawned = true;
@@ -798,7 +817,6 @@ class FPSGameEngine {
     bossMesh.position.set(0, 0, 15);
     this.scene.add(bossMesh);
 
-    // 800 HP (10X OF 80 HP MELEE ENEMY)
     this.boss = {
       id: "BOSS-TITAN",
       subject: "CYBER-JUGGERNAUT // TITAN-01 [ROOT PROTOCOL]",
@@ -873,7 +891,7 @@ class FPSGameEngine {
 
   shoot() {
     if (this.player.isReloading) return;
-    if (this.player.isStunned) return; // Cannot shoot while stunned by boss!
+    if (this.player.isStunned) return;
     if (this.player.ammoClip <= 0) {
       this.reload();
       return;
@@ -896,10 +914,16 @@ class FPSGameEngine {
     const raycaster = new THREE.Raycaster();
     raycaster.setFromCamera(new THREE.Vector2(0, 0), this.camera);
 
+    // Wall intersection check (bullets stop at solid obstacles)
+    const sceneObstacles = this.scene.children.filter(c => c !== this.camera && c !== this.weaponRig && !this.enemies.find(e => e.mesh === c));
+    const wallIntersects = raycaster.intersectObjects(sceneObstacles, true);
+    const wallDist = wallIntersects.length > 0 ? wallIntersects[0].distance : 999;
+
+    // Enemy hit check
     const enemyMeshes = this.enemies.map(e => e.mesh);
     const intersects = raycaster.intersectObjects(enemyMeshes, true);
 
-    if (intersects.length > 0) {
+    if (intersects.length > 0 && intersects[0].distance < wallDist) {
       this.player.shotsHit += 1;
       let hitMesh = intersects[0].object;
       while (hitMesh.parent && !this.enemies.find(e => e.mesh === hitMesh)) {
@@ -922,12 +946,8 @@ class FPSGameEngine {
           this.destroyEnemy(targetEnemy);
         }
       }
-    } else {
-      const sceneObjects = this.scene.children.filter(c => c !== this.camera && c !== this.weaponRig);
-      const wallIntersects = raycaster.intersectObjects(sceneObjects, true);
-      if (wallIntersects.length > 0 && wallIntersects[0].distance < 75) {
-        this.createImpactSparks(wallIntersects[0].point);
-      }
+    } else if (wallIntersects.length > 0 && wallDist < 75) {
+      this.createImpactSparks(wallIntersects[0].point);
     }
   }
 
@@ -1017,7 +1037,7 @@ class FPSGameEngine {
 
     if (!this.isLocked) return;
 
-    // HANDLE OPERATOR STUN STATE (FROM BOSS STOMP)
+    // Stun state from boss stomp
     if (this.player.isStunned) {
       this.player.stunTimer -= dt;
       const stunEl = document.getElementById("stun-banner");
@@ -1029,7 +1049,6 @@ class FPSGameEngine {
         this.player.isStunned = false;
         if (stunEl) stunEl.classList.add("hidden");
       }
-      // Cannot move or slide while stunned!
       return;
     }
 
@@ -1042,19 +1061,15 @@ class FPSGameEngine {
 
     let targetCameraY = 1.7;
 
+    // PLAYER MOVEMENT WITH PENETRATION RESOLVER
     if (this.player.isSliding) {
       targetCameraY = 0.85;
       this.player.slideTimer -= dt;
       const slideSpeed = 16.0 * (this.player.slideTimer / 0.65) + 3.0;
 
-      const nextX = this.player.position.x + this.player.slideDir.x * slideSpeed * dt;
-      if (!this.checkObstacleCollision(nextX, this.player.position.z, 0.45)) {
-        this.player.position.x = nextX;
-      }
-      const nextZ = this.player.position.z + this.player.slideDir.z * slideSpeed * dt;
-      if (!this.checkObstacleCollision(this.player.position.x, nextZ, 0.45)) {
-        this.player.position.z = nextZ;
-      }
+      this.player.position.x += this.player.slideDir.x * slideSpeed * dt;
+      this.player.position.z += this.player.slideDir.z * slideSpeed * dt;
+      this.resolveBoxCollision(this.player.position, 0.45);
 
       if (this.player.slideTimer <= 0) this.player.isSliding = false;
     } else {
@@ -1067,14 +1082,9 @@ class FPSGameEngine {
       moveDir.normalize();
       moveDir.applyAxisAngle(new THREE.Vector3(0, 1, 0), this.yaw);
 
-      const nextX = this.player.position.x + moveDir.x * speed * dt;
-      if (!this.checkObstacleCollision(nextX, this.player.position.z, 0.45)) {
-        this.player.position.x = nextX;
-      }
-      const nextZ = this.player.position.z + moveDir.z * speed * dt;
-      if (!this.checkObstacleCollision(this.player.position.x, nextZ, 0.45)) {
-        this.player.position.z = nextZ;
-      }
+      this.player.position.x += moveDir.x * speed * dt;
+      this.player.position.z += moveDir.z * speed * dt;
+      this.resolveBoxCollision(this.player.position, 0.45);
     }
 
     this.player.position.y += (targetCameraY - this.player.position.y) * 12 * dt;
@@ -1139,11 +1149,10 @@ class FPSGameEngine {
       sw.mesh.scale.set(sw.scale, sw.scale, 1);
       sw.mesh.material.opacity = Math.max(0, sw.opacity);
 
-      // BOSS STOMP STUN TRIGGER (IF IN RANGE < 12M, PLAYER IS STUNNED FOR 5s)
       const distToPlayer = this.player.position.distanceTo(sw.center);
       if (distToPlayer < 12.0 && sw.opacity > 0.5 && !this.player.isStunned) {
         this.player.isStunned = true;
-        this.player.stunTimer = 5.0; // 5-SECOND STUN!
+        this.player.stunTimer = 5.0;
         this.createFloatingTriageText(this.player.position, "⚡ STUNNED BY BOSS STOMP! (5s)");
       }
 
@@ -1153,9 +1162,10 @@ class FPSGameEngine {
       }
     }
 
-    // 4 COMBAT ENEMY CLASSES AI
+    // ENEMY AI & COMBAT LOOP
     const timeMs = performance.now();
     const isLast4 = this.enemies.length <= 4;
+    let anySniperAiming = false;
 
     for (let i = 0; i < this.enemies.length; i++) {
       const en = this.enemies[i];
@@ -1173,11 +1183,6 @@ class FPSGameEngine {
       en.mesh.lookAt(this.player.position.x, 0, this.player.position.z);
       const dist = en.mesh.position.distanceTo(this.player.position);
 
-      // CLASS SPEEDS:
-      // 1. Melee: 4.0 m/s
-      // 2. Speed Star: 7.2 m/s (Much faster!)
-      // 3. Rifleman: 3.0 m/s (Positions at range)
-      // 4. Boss: 4.0 m/s (Same as melee)
       let currentSpeed = 4.0;
       if (en.enemyClass === "speed") currentSpeed = 7.2;
       if (en.enemyClass === "rifleman") currentSpeed = 3.0;
@@ -1190,83 +1195,84 @@ class FPSGameEngine {
 
       const collisionRadius = en.isBoss ? 0.9 : 0.6;
 
-      // CLASS 3: RIFLEMAN SHOOTING (EVERY 5 SECONDS, DODGEABLE BY SLIDING!)
+      // 3. RIFLEMAN AI: MAX RANGE 35M + 2-SECOND LINE-OF-SIGHT REQUIREMENT
       if (en.enemyClass === "rifleman") {
-        if (dist > 18) {
-          const toPlayer = new THREE.Vector3().subVectors(this.player.position, en.mesh.position).normalize();
-          toPlayer.y = 0;
-          en.mesh.position.addScaledVector(toPlayer, currentSpeed * dt);
-        }
+        const eyeLevel = en.mesh.position.clone().add(new THREE.Vector3(0, 1.6, 0));
+        const playerEye = this.player.position.clone().add(new THREE.Vector3(0, 1.6, 0));
+        
+        // Raycast Line of Sight: walls block sniper completely!
+        const canSeePlayer = (dist <= 35) && this.hasLineOfSight(eyeLevel, playerEye);
 
-        // Fires every 5.0s (5000ms)
-        if (timeMs - en.lastRifleShot > 5000) {
-          en.lastRifleShot = timeMs;
-          if (this.sound) this.sound.playGunshot(true);
+        if (canSeePlayer) {
+          // Accumulate 2 seconds continuous aim
+          en.aimTimer += dt;
+          anySniperAiming = true;
 
-          // CAN BE DODGED IF PLAYER IS SLIDING!
-          if (this.player.isSliding) {
-            this.createFloatingTriageText(this.player.position, "💨 DODGED SNIPER! (SLIDE)");
-          } else {
-            this.player.health -= 30; // 30 DAMAGE IF HIT
-            this.showDamageVignette();
-            this.createFloatingTriageText(this.player.position, "💥 HIT BY RIFLEMAN (-30 HP)");
-            if (this.player.health <= 0) this.triggerMissionEnd(false);
+          if (en.mesh.userData.laser) {
+            en.mesh.userData.laser.visible = true;
+            en.mesh.userData.laser.material.color.setHex(en.aimTimer > 1.3 ? 0xff0000 : 0xffaa00);
+            en.mesh.userData.laser.material.opacity = 0.4 + (en.aimTimer / 2.0) * 0.6;
+          }
+
+          // Shoots after seeing you continuously for 2.0 seconds
+          if (en.aimTimer >= 2.0 && (timeMs - en.lastRifleShot > 5000)) {
+            en.lastRifleShot = timeMs;
+            en.aimTimer = 0;
+            if (this.sound) this.sound.playGunshot(true);
+
+            // DODGEABLE BY SLIDING AT RIGHT TIME!
+            if (this.player.isSliding) {
+              this.createFloatingTriageText(this.player.position, "💨 DODGED SNIPER! (SLIDE)");
+            } else {
+              this.player.health -= 30;
+              this.showDamageVignette();
+              this.createFloatingTriageText(this.player.position, "💥 SNIPER HIT (-30 HP)");
+              if (this.player.health <= 0) this.triggerMissionEnd(false);
+            }
+          }
+        } else {
+          // Lost sight behind wall: reset aim
+          en.aimTimer = Math.max(0, en.aimTimer - dt * 2.5);
+          if (en.mesh.userData.laser) en.mesh.userData.laser.visible = false;
+
+          // Advance towards open area to acquire sight
+          if (dist > 18) {
+            const toPlayer = new THREE.Vector3().subVectors(this.player.position, en.mesh.position).normalize();
+            toPlayer.y = 0;
+            en.mesh.position.x += toPlayer.x * currentSpeed * dt;
+            en.mesh.position.z += toPlayer.z * currentSpeed * dt;
+            this.resolveBoxCollision(en.mesh.position, collisionRadius);
           }
         }
         continue;
       }
 
-      // CLASSES 1, 2, & 4: CLOSE-RANGE COMBAT
+      // CLASSES 1, 2, & 4: CLOSE COMBAT
       const attackRange = en.isBoss ? 3.5 : 2.2;
 
       if (dist > attackRange) {
         const toPlayer = new THREE.Vector3().subVectors(this.player.position, en.mesh.position).normalize();
         toPlayer.y = 0;
 
-        let canMoveX = false;
-        let canMoveZ = false;
-
-        const nextEnX = en.mesh.position.x + toPlayer.x * currentSpeed * dt;
-        if (!this.checkObstacleCollision(nextEnX, en.mesh.position.z, collisionRadius)) {
-          en.mesh.position.x = nextEnX;
-          canMoveX = true;
-        }
-
-        const nextEnZ = en.mesh.position.z + toPlayer.z * currentSpeed * dt;
-        if (!this.checkObstacleCollision(en.mesh.position.x, nextEnZ, collisionRadius)) {
-          en.mesh.position.z = nextEnZ;
-          canMoveZ = true;
-        }
-
-        // Active steering avoidance around doors and racks
-        if (!canMoveX && !canMoveZ) {
-          const detX = en.mesh.position.x - toPlayer.z * currentSpeed * dt;
-          const detZ = en.mesh.position.z + toPlayer.x * currentSpeed * dt;
-          if (!this.checkObstacleCollision(detX, en.mesh.position.z, collisionRadius)) en.mesh.position.x = detX;
-          if (!this.checkObstacleCollision(en.mesh.position.x, detZ, collisionRadius)) en.mesh.position.z = detZ;
-        }
+        en.mesh.position.x += toPlayer.x * currentSpeed * dt;
+        en.mesh.position.z += toPlayer.z * currentSpeed * dt;
+        // ANTI-PHASING: Pushes enemy out of all walls immediately
+        this.resolveBoxCollision(en.mesh.position, collisionRadius);
       } else {
-        // ATTACK COOLDOWNS & DAMAGES:
-        // Melee: 20 dmg
-        // Speed Star: 10 dmg (rapid punches)
-        // Boss: Ground Stomp (5s Stun) or 30 dmg
         const attackInterval = en.isBoss ? 2000 : (en.enemyClass === "speed" ? 800 : 1200);
 
         if (timeMs - en.lastAttack > attackInterval) {
           en.lastAttack = timeMs;
 
           if (en.isBoss) {
-            // BOSS SPECIAL STOMP ATTACK
             if (this.sound) this.sound.playBossSlam();
             this.createShockwave(en.mesh.position);
           } else if (en.enemyClass === "melee") {
-            // MELEE SWORDSMAN: 20 DAMAGE PER SWING
             if (this.sound) this.sound.playMeleeStrike();
             this.player.health -= 20;
             this.showDamageVignette();
             this.createFloatingTriageText(this.player.position, "⚔️ SWORD SLASH (-20 HP)");
           } else if (en.enemyClass === "speed") {
-            // SPEED STAR: 10 DAMAGE PER PUNCH
             if (this.sound) this.sound.playMeleeStrike();
             this.player.health -= 10;
             this.showDamageVignette();
@@ -1278,6 +1284,12 @@ class FPSGameEngine {
           }
         }
       }
+    }
+
+    // Sniper HUD warning toggle
+    const sniperWarn = document.getElementById("sniper-warning");
+    if (sniperWarn) {
+      sniperWarn.classList.toggle("hidden", !anySniperAiming);
     }
 
     if (this.player.health < this.player.maxHealth && this.player.health > 0) {
