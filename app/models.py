@@ -1,4 +1,4 @@
-from typing import List, Optional, Literal
+from typing import List, Optional, Literal, Dict, Any
 from pydantic import BaseModel, EmailStr, Field
 
 class DemoRegistrationRequest(BaseModel):
@@ -9,12 +9,15 @@ class DemoRegistrationRequest(BaseModel):
 class EmailThreat(BaseModel):
     id: str
     sender: str
+    sender_email: str
     subject: str
-    category: Literal["phishing", "spam", "newsletter", "cold_outreach"]
+    category: Literal["phishing", "spam", "newsletter", "social", "promotions", "finance", "work", "personal"]
     threat_level: int = Field(..., ge=1, le=5)
-    action: Optional[Literal["purge", "archive", "quarantine"]] = None
+    action: Optional[Literal["purge", "archive", "quarantine", "filter"]] = None
     applied_in_session: bool = False
     opt_out_link: Optional[str] = None
+    message_count: int = 1
+    message_ids: List[str] = []
 
 class SessionState(BaseModel):
     session_id: str
@@ -24,5 +27,46 @@ class SessionState(BaseModel):
     threats_total: int
     threats_neutralized: int
     inbox_integrity: float = 100.0
-    filters_generated: int = 0
+    is_real_gmail: bool = False
     threats: List[EmailThreat] = []
+
+class SenderCluster(BaseModel):
+    sender_email: str
+    sender_name: str
+    email_count: int
+    latest_date: str
+    sample_subjects: List[str]
+    category: str
+    confidence: float
+    clutter_score: float
+    recommended_action: str
+    opt_out_link: Optional[str] = None
+    message_ids: List[str]
+
+class InboxAnalysisSummary(BaseModel):
+    total_messages_scanned: int
+    clutter_messages_count: int
+    total_clusters: int
+    top_senders: List[SenderCluster]
+    clutter_ratio: float
+
+class CleanupOperationRequest(BaseModel):
+    session_id: str
+    operations: List[Dict[str, Any]] # [{"cluster_id": "...", "action": "archive" | "filter" | "unsubscribe"}]
+
+class ExecutionAuditItem(BaseModel):
+    operation_id: str
+    target_sender: str
+    action: str
+    status: Literal["PLANNED", "CONFIRMED", "EXECUTING", "SUCCEEDED", "PARTIALLY_SUCCEEDED", "FAILED"]
+    message_count: int
+    details: str
+    timestamp: str
+
+class AuditReport(BaseModel):
+    total_operations: int
+    succeeded: int
+    failed: int
+    archived_emails: int
+    filters_created: int
+    items: List[ExecutionAuditItem]
