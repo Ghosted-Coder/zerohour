@@ -31,13 +31,13 @@ def classify_email_heuristic(sender: str, subject: str, snippet: str, list_unsub
     if RE_SOCIAL.search(combined):
         return ("social", 0.92)
 
-    # Newsletters
-    if list_unsub or RE_NEWSLETTER.search(combined):
-        return ("newsletter", 0.94)
-
     # Promotions & Marketing Clutter
     if RE_PROMO.search(combined):
         return ("promotions", 0.96)
+
+    # Newsletters
+    if list_unsub or RE_NEWSLETTER.search(combined):
+        return ("newsletter", 0.94)
 
     return ("promotions" if list_unsub else "personal", 0.75)
 
@@ -51,15 +51,21 @@ def cluster_and_analyze_messages(raw_messages: List[Dict[str, Any]], cache_key: 
     clusters: Dict[str, Dict[str, Any]] = {}
 
     for msg in raw_messages:
-        sender_raw = sanitize_input_text(msg.get("from", "unknown@sender.com"), 90)
+        sender_raw = str(msg.get("from", "unknown@sender.com"))
         subject = sanitize_input_text(msg.get("subject", "(No Subject)"), 120)
         snippet = sanitize_input_text(msg.get("snippet", ""), 160)
         unsub_link = msg.get("list_unsubscribe")
         msg_id = msg.get("id")
 
         match = RE_EMAIL.search(sender_raw)
-        sender_email = match.group(1).lower() if match else sender_raw.strip().lower()
-        sender_name = RE_STRIP_EMAIL.sub('', sender_raw).strip().strip('"') or sender_email.split('@')[0]
+        sender_email = sanitize_input_text(
+            match.group(1).lower() if match else sender_raw.strip().lower(),
+            120
+        )
+        sender_name = sanitize_input_text(
+            RE_STRIP_EMAIL.sub('', sender_raw).strip().strip('"') or sender_email.split('@')[0],
+            90
+        )
 
         if sender_email not in clusters:
             clusters[sender_email] = {
