@@ -1,11 +1,10 @@
 /**
- * ZEROHOUR 3D FIRST-PERSON SHOOTER ENGINE (ALCATRAZ ISLAND OPEN-WORLD)
- * Features:
- *  - 240m x 240m Open-Air Alcatraz Fortress Map (Cellhouse, Watchtowers, Courtyard, Ocean)
- *  - Tactical UAV Radar Minimap (Top-Left HUD)
- *  - Killstreak: [Q] Tactical EMP Shockwave (Stuns bots for 4.5s)
- *  - In-World 3D Floating Triage Combat Feedback
- *  - Wall Bullet Ricochet Sparks & Lighting
+ * ZEROHOUR 3D FIRST-PERSON SHOOTER ENGINE (ALCATRAZ OPEN-WORLD)
+ * Upgrades:
+ *  - 8-meter Open Archways (Freely enter and exit Cellhouse)
+ *  - Boss Movement Steering & Unblocked Pathing (700 HP Juggernaut pursues actively)
+ *  - Last 4 Enemies Target Locator (3D world vertical beacons & live distance tracker)
+ *  - 4 Procedural Weather Rigs: Sunny, Rainy, Spring (with 3D Trees), Snow
  */
 class FPSGameEngine {
   constructor(canvasId, sound) {
@@ -17,7 +16,7 @@ class FPSGameEngine {
     this.renderer = null;
 
     this.player = {
-      position: new THREE.Vector3(0, 1.7, 45), // Spawns outside cellhouse in courtyard
+      position: new THREE.Vector3(0, 1.7, 42),
       velocity: new THREE.Vector3(),
       health: 100,
       maxHealth: 100,
@@ -32,13 +31,14 @@ class FPSGameEngine {
       canJump: true,
       shotsFired: 0,
       shotsHit: 0,
-      empCharge: 0, // 0 to 100
+      empCharge: 0,
     };
 
     this.pitch = 0;
     this.yaw = 0;
     this.isLocked = false;
     this.difficulty = "veteran";
+    this.weatherType = "spring"; // sunny, rainy, spring, snow
     this.totalThreatsCount = 0;
 
     this.keys = { w: false, a: false, s: false, d: false, shift: false };
@@ -65,6 +65,8 @@ class FPSGameEngine {
     this.searchlights = [];
     this.floatingTexts = [];
     this.impactParticles = [];
+    this.weatherParticles = null;
+    this.treeMeshes = [];
 
     this.uavCanvas = document.getElementById("hud-uav-canvas");
     this.uavCtx = this.uavCanvas ? this.uavCanvas.getContext("2d") : null;
@@ -80,27 +82,24 @@ class FPSGameEngine {
 
   initThree() {
     this.scene = new THREE.Scene();
-    this.scene.background = new THREE.Color(0x0a101d); // Dark atmospheric island sky
-    this.scene.fog = new THREE.FogExp2(0x0a101d, 0.008);
-
-    this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 350);
+    this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 400);
     this.camera.rotation.order = 'YXZ';
-    this.camera.position.set(0, 1.7, 45);
+    this.camera.position.set(0, 1.7, 42);
 
     this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true, powerPreference: "high-performance" });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 
-    // MOONLIGHT & ALCATRAZ LIGHTING
-    const ambientLight = new THREE.AmbientLight(0xffffff, 1.8);
-    this.scene.add(ambientLight);
+    this.ambientLight = new THREE.AmbientLight(0xffffff, 1.8);
+    this.scene.add(this.ambientLight);
 
-    const moonLight = new THREE.DirectionalLight(0xaaccff, 1.2);
-    moonLight.position.set(60, 120, 60);
-    this.scene.add(moonLight);
+    this.sunLight = new THREE.DirectionalLight(0xaaccff, 1.4);
+    this.sunLight.position.set(60, 120, 60);
+    this.scene.add(this.sunLight);
 
     this.buildAlcatrazMap();
     this.buildDetailedWeaponModel();
+    this.applyWeather(this.weatherType);
 
     window.addEventListener("resize", () => {
       if (!this.camera || !this.renderer) return;
@@ -110,28 +109,131 @@ class FPSGameEngine {
     });
   }
 
-  // MASSIVE COD ALCATRAZ ISLAND MAP BUILDER (240M X 240M)
+  // 4 DYNAMIC RIGGED WEATHERS
+  applyWeather(type) {
+    this.weatherType = type;
+    if (this.weatherParticles) {
+      this.scene.remove(this.weatherParticles);
+      this.weatherParticles = null;
+    }
+    this.treeMeshes.forEach(t => this.scene.remove(t));
+    this.treeMeshes = [];
+
+    if (type === "sunny") {
+      this.scene.background = new THREE.Color(0x3a6b9f);
+      this.scene.fog = new THREE.FogExp2(0x5a8bbf, 0.003);
+      this.ambientLight.color.setHex(0xfffae8);
+      this.ambientLight.intensity = 2.4;
+      this.sunLight.color.setHex(0xfff5cc);
+      this.sunLight.intensity = 2.2;
+    }
+    else if (type === "rainy") {
+      this.scene.background = new THREE.Color(0x0a1018);
+      this.scene.fog = new THREE.FogExp2(0x0e1722, 0.015);
+      this.ambientLight.color.setHex(0x50657a);
+      this.ambientLight.intensity = 1.3;
+      this.sunLight.intensity = 0.6;
+      this.createRainSystem();
+    }
+    else if (type === "spring") {
+      this.scene.background = new THREE.Color(0x2a507a);
+      this.scene.fog = new THREE.FogExp2(0x3a6088, 0.004);
+      this.ambientLight.color.setHex(0xfafae8);
+      this.ambientLight.intensity = 2.1;
+      this.sunLight.color.setHex(0xfff0d0);
+      this.sunLight.intensity = 1.8;
+      this.spawnCourtyardTrees(); // Spawns procedural 3D trees!
+    }
+    else if (type === "snow") {
+      this.scene.background = new THREE.Color(0x8da4bc);
+      this.scene.fog = new THREE.FogExp2(0xb0c2d4, 0.014);
+      this.ambientLight.color.setHex(0xe8f0f8);
+      this.ambientLight.intensity = 2.0;
+      this.sunLight.intensity = 1.0;
+      this.createSnowSystem();
+    }
+  }
+
+  // PROCEDURAL 3D TREES RIG (SPRING)
+  spawnCourtyardTrees() {
+    const treeCoords = [
+      [-30, 40], [-45, 25], [30, 40], [45, 25],
+      [-50, -20], [50, -20], [-40, -45], [40, -45]
+    ];
+    treeCoords.forEach(([tx, tz]) => {
+      const group = new THREE.Group();
+      // Wooden trunk
+      const trunkMat = new THREE.MeshStandardMaterial({ color: 0x3d2817, roughness: 0.9 });
+      const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.5, 4.0, 8), trunkMat);
+      trunk.position.y = 2.0;
+      group.add(trunk);
+
+      // Lush green foliage tiers
+      const leafMat = new THREE.MeshStandardMaterial({ color: 0x228b22, roughness: 0.6 });
+      [3.8, 5.2, 6.4].forEach((ly, idx) => {
+        const radius = 2.4 - idx * 0.6;
+        const leaves = new THREE.Mesh(new THREE.ConeGeometry(radius, 2.0, 8), leafMat);
+        leaves.position.y = ly;
+        group.add(leaves);
+      });
+
+      group.position.set(tx, 0, tz);
+      this.scene.add(group);
+      this.treeMeshes.push(group);
+      // Tree trunk obstacle collision
+      this.wallBoxes.push({
+        min: { x: tx - 0.6, z: tz - 0.6 },
+        max: { x: tx + 0.6, z: tz + 0.6 }
+      });
+    });
+  }
+
+  createRainSystem() {
+    const count = 1600;
+    const geo = new THREE.BufferGeometry();
+    const pos = new Float32Array(count * 3);
+    for (let i = 0; i < count * 3; i += 3) {
+      pos[i] = (Math.random() - 0.5) * 220;
+      pos[i + 1] = Math.random() * 45;
+      pos[i + 2] = (Math.random() - 0.5) * 220;
+    }
+    geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    const mat = new THREE.PointsMaterial({ color: 0x88bbdd, size: 0.25, transparent: true, opacity: 0.65 });
+    this.weatherParticles = new THREE.Points(geo, mat);
+    this.scene.add(this.weatherParticles);
+  }
+
+  createSnowSystem() {
+    const count = 1400;
+    const geo = new THREE.BufferGeometry();
+    const pos = new Float32Array(count * 3);
+    for (let i = 0; i < count * 3; i += 3) {
+      pos[i] = (Math.random() - 0.5) * 220;
+      pos[i + 1] = Math.random() * 45;
+      pos[i + 2] = (Math.random() - 0.5) * 220;
+    }
+    geo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    const mat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.45, transparent: true, opacity: 0.85 });
+    this.weatherParticles = new THREE.Points(geo, mat);
+    this.scene.add(this.weatherParticles);
+  }
+
+  // ALCATRAZ MAP WITH 8-METER WIDE OPEN ARCHWAYS (CAN FREELY ENTER CELLHOUSE)
   buildAlcatrazMap() {
     this.wallBoxes = [];
     this.searchlights = [];
 
-    // 1. Island Terrain & Ocean
-    const oceanGeo = new THREE.PlaneGeometry(350, 350);
-    const oceanMat = new THREE.MeshStandardMaterial({ color: 0x050c18, roughness: 0.2, metalness: 0.8 });
-    const ocean = new THREE.Mesh(oceanGeo, oceanMat);
+    const ocean = new THREE.Mesh(new THREE.PlaneGeometry(400, 400), new THREE.MeshStandardMaterial({ color: 0x060e1a, roughness: 0.2, metalness: 0.8 }));
     ocean.rotation.x = -Math.PI / 2;
     ocean.position.y = -0.5;
     this.scene.add(ocean);
 
-    const islandGeo = new THREE.PlaneGeometry(240, 240);
-    const islandMat = new THREE.MeshStandardMaterial({ color: 0x181e26, roughness: 0.8, metalness: 0.2 });
-    const island = new THREE.Mesh(islandGeo, islandMat);
+    const island = new THREE.Mesh(new THREE.PlaneGeometry(240, 240), new THREE.MeshStandardMaterial({ color: 0x1a212a, roughness: 0.8, metalness: 0.2 }));
     island.rotation.x = -Math.PI / 2;
     this.scene.add(island);
 
     const addBoxObstacle = (x, z, w, d, h, color = 0x242e3c) => {
-      const mat = new THREE.MeshStandardMaterial({ color: color, roughness: 0.5, metalness: 0.4 });
-      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+      const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), new THREE.MeshStandardMaterial({ color, roughness: 0.5, metalness: 0.4 }));
       mesh.position.set(x, h / 2, z);
       this.scene.add(mesh);
       this.wallBoxes.push({
@@ -141,34 +243,37 @@ class FPSGameEngine {
       return mesh;
     };
 
-    // 2. Main Penitentiary Cellhouse (Center Citadel)
-    // Outer walls with door breaches
-    addBoxObstacle(-18, 0, 2, 60, 10); // West wall
-    addBoxObstacle(18, 0, 2, 60, 10);  // East wall
-    addBoxObstacle(0, -30, 36, 2, 10); // North wall
-    addBoxObstacle(-11, 30, 14, 2, 10); // South wall west segment
-    addBoxObstacle(11, 30, 14, 2, 10);  // South wall east segment (breach in center at x=[-4, 4])
+    // MAIN CELLHOUSE CITADEL WITH 8M WIDE ARCHWAYS (NORTH, SOUTH, EAST, WEST)
+    // South Wall with 8m Archway (x=[-4, 4] is wide open!)
+    addBoxObstacle(-11, 30, 14, 2, 10);
+    addBoxObstacle(11, 30, 14, 2, 10);
 
-    // Cellhouse Roof / Helipad
+    // North Wall with 8m Archway
+    addBoxObstacle(-11, -30, 14, 2, 10);
+    addBoxObstacle(11, -30, 14, 2, 10);
+
+    // West Wall with 8m Archway
+    addBoxObstacle(-18, -17, 2, 26, 10);
+    addBoxObstacle(-18, 17, 2, 26, 10);
+
+    // East Wall with 8m Archway
+    addBoxObstacle(18, -17, 2, 26, 10);
+    addBoxObstacle(18, 17, 2, 26, 10);
+
+    // Helipad / Roof
     const roof = addBoxObstacle(0, 0, 38, 62, 0.6, 0x121720);
     roof.position.y = 10;
 
-    // Interior Double-Stacked Server Vault Clusters
-    for (let sz = -20; sz <= 20; sz += 8) {
-      addBoxObstacle(-10, sz, 4, 1.6, 4.5, 0x161c28);
-      addBoxObstacle(10, sz, 4, 1.6, 4.5, 0x161c28);
+    // Interior Server Racks placed with wide 6m unobstructed central aisle
+    for (let sz = -18; sz <= 18; sz += 9) {
+      addBoxObstacle(-12, sz, 3, 1.4, 4.5, 0x161c28);
+      addBoxObstacle(12, sz, 3, 1.4, 4.5, 0x161c28);
     }
 
-    // 3. 4 Corner Guard Towers with Sweeping Searchlights
-    const towerCoords = [
-      [-65, -65], [65, -65], [-65, 65], [65, 65]
-    ];
-    towerCoords.forEach(([tx, tz]) => {
-      // Guard tower cabin
+    // 4 Corner Watchtowers
+    [[-65, -65], [65, -65], [-65, 65], [65, 65]].forEach(([tx, tz]) => {
       addBoxObstacle(tx, tz, 6, 6, 14, 0x222a36);
-      
-      // Sweeping searchlight spotlight
-      const spot = new THREE.SpotLight(0xffffff, 3.5, 80, Math.PI / 6, 0.4, 1.2);
+      const spot = new THREE.SpotLight(0xffffff, 3.5, 85, Math.PI / 6, 0.4, 1.2);
       spot.position.set(tx, 14.5, tz);
       const target = new THREE.Object3D();
       target.position.set(tx * 0.3, 0, tz * 0.3);
@@ -178,12 +283,11 @@ class FPSGameEngine {
       this.searchlights.push({ spot, target, baseAngle: Math.random() * Math.PI * 2, cx: tx, cz: tz });
     });
 
-    // 4. Courtyard Barricades & Chain-Link Fences
+    // Courtyard Perimeter & Barricades
     addBoxObstacle(-35, 20, 1.2, 30, 2.5, 0x334155);
     addBoxObstacle(35, 20, 1.2, 30, 2.5, 0x334155);
-    addBoxObstacle(0, 60, 45, 1.2, 2.5, 0x334155); // Courtyard south wall
+    addBoxObstacle(0, 60, 45, 1.2, 2.5, 0x334155);
 
-    // Concrete blast blocks
     for (let b = -40; b <= 40; b += 20) {
       if (Math.abs(b) < 10) continue;
       addBoxObstacle(b, 35, 3.5, 1.4, 1.5, 0x475569);
@@ -275,7 +379,6 @@ class FPSGameEngine {
         return true;
       }
     }
-    // Alcatraz island boundaries
     if (posX < -110 || posX > 110 || posZ < -110 || posZ > 110) return true;
     return false;
   }
@@ -290,10 +393,7 @@ class FPSGameEngine {
       if (k === "d") this.keys.d = true;
       if (e.shiftKey) this.keys.shift = true;
 
-      // [Q] TRIGGER TACTICAL EMP SHOCKWAVE
-      if (k === "q") {
-        this.triggerEmpShockwave();
-      }
+      if (k === "q") this.triggerEmpShockwave();
 
       if ((k === "c" || e.code === "ControlLeft" || e.code === "ControlRight") && !this.player.isSliding) {
         this.triggerSlide();
@@ -343,7 +443,6 @@ class FPSGameEngine {
     window.addEventListener("contextmenu", (e) => e.preventDefault());
   }
 
-  // TACTICAL EMP SHOCKWAVE ABILITY
   triggerEmpShockwave() {
     if (this.player.empCharge < 100) return;
     this.player.empCharge = 0;
@@ -357,10 +456,9 @@ class FPSGameEngine {
       setTimeout(() => flash.classList.add("hidden"), 600);
     }
 
-    // Stun all enemies within 45m radius
     this.enemies.forEach(en => {
       const dist = en.mesh.position.distanceTo(this.player.position);
-      if (dist < 45) {
+      if (dist < 50) {
         en.isStunned = true;
         en.stunTimer = 4.5;
         this.createFloatingTriageText(en.mesh.position, "⚡ EMP STUNNED (-50% DEFENSE)");
@@ -402,10 +500,11 @@ class FPSGameEngine {
     this.player.slideDir.copy(moveDir);
   }
 
-  // SCATTER ENEMIES ACROSS ALCATRAZ ISLAND
-  loadSession(threats, diff = "veteran") {
+  loadSession(threats, diff = "veteran", weather = "spring") {
     this.threats = threats || [];
     this.difficulty = (diff || "veteran").toLowerCase();
+    this.applyWeather(weather || this.weatherType);
+
     this.enemies.forEach(en => this.scene.remove(en.mesh));
     this.enemies = [];
     if (this.boss) {
@@ -431,10 +530,9 @@ class FPSGameEngine {
 
     this.totalThreatsCount = this.threats.length;
 
-    // Scatter throughout Alcatraz yard and cellhouse
     this.threats.forEach((th, i) => {
       const angle = (i / this.threats.length) * Math.PI * 2;
-      const radius = 25 + ((i * 9) % 55); // Scattered up to 80m across island
+      const radius = 22 + ((i * 9) % 55);
       let ex = Math.cos(angle) * radius;
       let ez = Math.sin(angle) * radius;
 
@@ -467,6 +565,7 @@ class FPSGameEngine {
     this.updateHudCounter();
   }
 
+  // UPDATE RADAR & LAST 4 ENEMIES LOCATOR
   updateHudCounter() {
     const activeRemaining = this.enemies.length;
     const neutralized = this.totalThreatsCount - activeRemaining;
@@ -474,19 +573,35 @@ class FPSGameEngine {
     if (hudObj) {
       hudObj.textContent = "ALCATRAZ THREATS: " + activeRemaining + " ACTIVE [ " + neutralized + " / " + this.totalThreatsCount + " PURGED ]";
     }
+
+    // LAST 4 ENEMIES TARGET LOCATOR
+    const locBanner = document.getElementById("locator-banner");
+    if (locBanner) {
+      if (activeRemaining <= 4 && activeRemaining > 0) {
+        locBanner.classList.remove("hidden");
+        // Calculate distance to nearest remaining threat
+        let minDist = 999;
+        this.enemies.forEach(en => {
+          const d = this.player.position.distanceTo(en.mesh.position);
+          if (d < minDist) minDist = d;
+        });
+        const distEl = document.getElementById("nearest-target-dist");
+        if (distEl) distEl.textContent = "NEAREST: " + Math.round(minDist) + "m";
+      } else {
+        locBanner.classList.add("hidden");
+      }
+    }
   }
 
-  // RENDER TACTICAL COD UAV MINIMAP (TOP-LEFT RADAR)
   renderUavRadar() {
     if (!this.uavCtx) return;
     const ctx = this.uavCtx;
     const size = 130;
     const center = size / 2;
-    const radarRange = 65; // meters
+    const radarRange = 70;
 
     ctx.clearRect(0, 0, size, size);
 
-    // Radar background grid & rings
     ctx.strokeStyle = "rgba(0, 255, 204, 0.25)";
     ctx.lineWidth = 1;
     [20, 40, 60].forEach(r => {
@@ -495,13 +610,11 @@ class FPSGameEngine {
       ctx.stroke();
     });
 
-    // Crosshairs
     ctx.beginPath();
     ctx.moveTo(center, 4); ctx.lineTo(center, size - 4);
     ctx.moveTo(4, center); ctx.lineTo(size - 4, center);
     ctx.stroke();
 
-    // Rotating Sweep line
     this.uavSweepAngle += 0.045;
     ctx.save();
     ctx.translate(center, center);
@@ -517,7 +630,6 @@ class FPSGameEngine {
     ctx.fill();
     ctx.restore();
 
-    // Draw enemy blips on radar
     this.enemies.forEach(en => {
       const dx = en.mesh.position.x - this.player.position.x;
       const dz = en.mesh.position.z - this.player.position.z;
@@ -528,24 +640,29 @@ class FPSGameEngine {
         const ry = center + (dz / radarRange) * (size / 2);
 
         if (en.isBoss) {
-          // Boss Skull / Diamond
           ctx.fillStyle = "#ff0033";
           ctx.beginPath();
-          ctx.arc(rx, ry, 5, 0, Math.PI * 2);
+          ctx.arc(rx, ry, 6, 0, Math.PI * 2);
           ctx.fill();
           ctx.strokeStyle = "#ffffff";
           ctx.stroke();
         } else {
-          // Regular Red Bot Blip
-          ctx.fillStyle = "#ff3344";
-          ctx.beginPath();
-          ctx.arc(rx, ry, 3, 0, Math.PI * 2);
-          ctx.fill();
+          // If 4 or fewer enemies, highlight with glowing circle on UAV
+          if (this.enemies.length <= 4) {
+            ctx.fillStyle = "#00ffcc";
+            ctx.beginPath();
+            ctx.arc(rx, ry, 5, 0, Math.PI * 2);
+            ctx.fill();
+          } else {
+            ctx.fillStyle = "#ff3344";
+            ctx.beginPath();
+            ctx.arc(rx, ry, 3, 0, Math.PI * 2);
+            ctx.fill();
+          }
         }
       }
     });
 
-    // Draw Player Green Chevron in Center
     ctx.save();
     ctx.translate(center, center);
     ctx.rotate(-this.yaw);
@@ -579,6 +696,12 @@ class FPSGameEngine {
     vest.position.y = 1.15 * scale;
     group.add(vest);
 
+    for (let p = -0.16; p <= 0.16; p += 0.16) {
+      const pouch = new THREE.Mesh(new THREE.BoxGeometry(0.12 * scale, 0.19 * scale, 0.09 * scale), armorPlateMat);
+      pouch.position.set(p * scale, 1.05 * scale, 0.22 * scale);
+      group.add(pouch);
+    }
+
     const head = new THREE.Mesh(new THREE.SphereGeometry(0.2 * scale, 16, 16), skinMat);
     head.position.y = 1.64 * scale;
     group.add(head);
@@ -591,10 +714,25 @@ class FPSGameEngine {
     visorCenter.position.set(0, 1.65 * scale, 0.18 * scale);
     group.add(visorCenter);
 
+    for (let t = -0.1; t <= 0.1; t += 0.065) {
+      const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.02 * scale, 0.02 * scale, 0.1 * scale, 8), new THREE.MeshBasicMaterial({ color: visorColor }));
+      tube.rotation.x = Math.PI / 2;
+      tube.position.set(t * scale, 1.65 * scale, 0.24 * scale);
+      group.add(tube);
+    }
+
     const bladeArm = new THREE.Mesh(new THREE.BoxGeometry(0.08 * scale, 0.09 * scale, 0.72 * scale), meleeWeaponMat);
     bladeArm.position.set(0.26 * scale, 1.05 * scale, 0.32 * scale);
     bladeArm.rotation.x = 0.35;
     group.add(bladeArm);
+
+    // 3D BEACON MARKER (Appears when only last 4 enemies remain)
+    const beaconGeo = new THREE.CylinderGeometry(0.05, 0.05, 6.0, 8);
+    const beaconMat = new THREE.MeshBasicMaterial({ color: 0x00ffcc, transparent: true, opacity: 0.7 });
+    const beacon = new THREE.Mesh(beaconGeo, beaconMat);
+    beacon.position.y = 4.5 * scale;
+    beacon.visible = false;
+    group.add(beacon);
 
     const legGeo = new THREE.BoxGeometry(0.2 * scale, 0.75 * scale, 0.22 * scale);
     const leftLeg = new THREE.Mesh(legGeo, camoMat);
@@ -605,10 +743,11 @@ class FPSGameEngine {
     rightLeg.position.set(0.16 * scale, 0.38 * scale, 0);
     group.add(rightLeg);
 
-    group.userData = { leftLeg, rightLeg, bladeArm, animPhase: Math.random() * Math.PI, isBoss };
+    group.userData = { leftLeg, rightLeg, bladeArm, beacon, animPhase: Math.random() * Math.PI, isBoss };
     return group;
   }
 
+  // SPAWN JUGGERNAUT BOSS (700 HP) IN OPEN COURTYARD
   spawnBoss() {
     if (this.bossSpawned) return;
     this.bossSpawned = true;
@@ -619,7 +758,8 @@ class FPSGameEngine {
     }
 
     const bossMesh = this.createSoldierMesh("phishing", true);
-    bossMesh.position.set(0, 0, -10); // Spawns inside center cellhouse
+    // Spawns right outside the southern archway in courtyard (unobstructed movement!)
+    bossMesh.position.set(0, 0, 15);
     this.scene.add(bossMesh);
 
     this.boss = {
@@ -652,13 +792,12 @@ class FPSGameEngine {
     this.shockwaves.push({ mesh: ring, scale: 1.0, opacity: 0.9 });
   }
 
-  // IN-WORLD 3D FLOATING TRIAGE TEXT FEEDBACK
   createFloatingTriageText(pos, textStr) {
     const canvas = document.createElement("canvas");
     canvas.width = 320;
     canvas.height = 64;
     const ctx = canvas.getContext("2d");
-    ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
+    ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
     ctx.fillRect(0, 0, 320, 64);
     ctx.strokeStyle = "#00ffcc";
     ctx.strokeRect(2, 2, 316, 60);
@@ -677,7 +816,6 @@ class FPSGameEngine {
     this.floatingTexts.push({ sprite, timer: 1.4 });
   }
 
-  // BULLET WALL RICOCHET IMPACT SPARKS
   createImpactSparks(point) {
     if (this.sound) this.sound.playRicochet();
 
@@ -719,7 +857,6 @@ class FPSGameEngine {
     const raycaster = new THREE.Raycaster();
     raycaster.setFromCamera(new THREE.Vector2(0, 0), this.camera);
 
-    // 1. Check enemy hits
     const enemyMeshes = this.enemies.map(e => e.mesh);
     const intersects = raycaster.intersectObjects(enemyMeshes, true);
 
@@ -732,7 +869,7 @@ class FPSGameEngine {
       const targetEnemy = this.enemies.find(e => e.mesh === hitMesh);
 
       if (targetEnemy) {
-        const damageDealt = targetEnemy.isStunned ? 55 : 35; // Bonus damage when EMP stunned!
+        const damageDealt = targetEnemy.isStunned ? 55 : 35;
         targetEnemy.health -= damageDealt;
         if (this.sound) this.sound.playHitmarker();
         this.showHitmarker(false);
@@ -747,10 +884,9 @@ class FPSGameEngine {
         }
       }
     } else {
-      // 2. Wall ricochet impacts
       const sceneObjects = this.scene.children.filter(c => c !== this.camera && c !== this.weaponRig);
       const wallIntersects = raycaster.intersectObjects(sceneObjects, true);
-      if (wallIntersects.length > 0 && wallIntersects[0].distance < 60) {
+      if (wallIntersects.length > 0 && wallIntersects[0].distance < 75) {
         this.createImpactSparks(wallIntersects[0].point);
       }
     }
@@ -769,12 +905,10 @@ class FPSGameEngine {
     const idx = this.enemies.indexOf(enemy);
     if (idx > -1) this.enemies.splice(idx, 1);
 
-    // Charge EMP Meter (+20% per kill)
     this.player.empCharge = Math.min(100, this.player.empCharge + 20);
     this.updateEmpMeter();
 
-    // 3D Floating Feedback
-    const label = `+150 EXP // ARCHIVED [${enemy.sender.substring(0, 14)}]`;
+    const label = "+150 EXP // ARCHIVED [" + (enemy.sender ? enemy.sender.substring(0, 14) : "Threat") + "]";
     this.createFloatingTriageText(enemy.mesh.position, label);
 
     if (enemy.isBoss) {
@@ -831,6 +965,17 @@ class FPSGameEngine {
   update(dt) {
     const now = performance.now() / 1000;
 
+    // Update Weather Falling Particles (Rain / Snow)
+    if (this.weatherParticles) {
+      const pos = this.weatherParticles.geometry.attributes.position.array;
+      const speed = this.weatherType === "rainy" ? 50 : 8;
+      for (let i = 1; i < pos.length; i += 3) {
+        pos[i] -= speed * dt;
+        if (pos[i] < 0) pos[i] = 45;
+      }
+      this.weatherParticles.geometry.attributes.position.needsUpdate = true;
+    }
+
     if (!this.isLocked) return;
 
     if (this.mouse.left && !this.player.isReloading) {
@@ -842,7 +987,6 @@ class FPSGameEngine {
 
     let targetCameraY = 1.7;
 
-    // Movement & Sliding
     if (this.player.isSliding) {
       targetCameraY = 0.85;
       this.player.slideTimer -= dt;
@@ -906,14 +1050,12 @@ class FPSGameEngine {
       this.weaponRig.rotation.z += (targetRoll - this.weaponRig.rotation.z) * 10 * dt;
     }
 
-    // Update Sweeping Watchtower Searchlights
     this.searchlights.forEach(sl => {
       sl.baseAngle += 0.4 * dt;
       sl.target.position.x = sl.cx * 0.3 + Math.sin(sl.baseAngle) * 35;
       sl.target.position.z = sl.cz * 0.3 + Math.cos(sl.baseAngle) * 35;
     });
 
-    // Update Floating Triage Texts
     for (let f = this.floatingTexts.length - 1; f >= 0; f--) {
       const ft = this.floatingTexts[f];
       ft.sprite.position.y += 0.8 * dt;
@@ -925,7 +1067,6 @@ class FPSGameEngine {
       }
     }
 
-    // Update Ricochet Particles
     for (let p = this.impactParticles.length - 1; p >= 0; p--) {
       const ip = this.impactParticles[p];
       ip.timer -= dt;
@@ -936,7 +1077,6 @@ class FPSGameEngine {
       }
     }
 
-    // Update Expanding Shockwaves
     for (let s = this.shockwaves.length - 1; s >= 0; s--) {
       const sw = this.shockwaves[s];
       sw.scale += 14 * dt;
@@ -956,15 +1096,20 @@ class FPSGameEngine {
       }
     }
 
-    // Enemy AI & Alcatraz Obstacle Navigation
+    // ENEMY & UNBLOCKED BOSS CHASE AI
     const timeMs = performance.now();
     const speedMap = { recruit: 3.8, veteran: 4.8, elite: 5.8 };
     const baseChaseSpeed = speedMap[this.difficulty] || 4.8;
+    const isLast4 = this.enemies.length <= 4;
 
     for (let i = 0; i < this.enemies.length; i++) {
       const en = this.enemies[i];
 
-      // Handle EMP Stun State
+      // Activate vertical glowing beacon on remaining targets
+      if (en.mesh.userData.beacon) {
+        en.mesh.userData.beacon.visible = isLast4;
+      }
+
       if (en.isStunned) {
         en.stunTimer -= dt;
         if (en.stunTimer <= 0) en.isStunned = false;
@@ -980,12 +1125,12 @@ class FPSGameEngine {
       en.mesh.userData.rightLeg.rotation.x = -legAngle;
 
       const attackRange = en.isBoss ? 3.5 : 2.2;
-      const collisionRadius = en.isBoss ? 1.4 : 0.6;
+      const collisionRadius = en.isBoss ? 0.9 : 0.6; // Streamlined collision box
 
       if (dist > attackRange) {
         const toPlayer = new THREE.Vector3().subVectors(this.player.position, en.mesh.position).normalize();
         toPlayer.y = 0;
-        const currentSpeed = en.isBoss ? 3.2 : baseChaseSpeed;
+        const currentSpeed = en.isBoss ? 3.6 : baseChaseSpeed;
 
         let canMoveX = false;
         let canMoveZ = false;
@@ -1002,6 +1147,7 @@ class FPSGameEngine {
           canMoveZ = true;
         }
 
+        // Active steering avoidance around archways & server racks
         if (!canMoveX && !canMoveZ) {
           const detX = en.mesh.position.x - toPlayer.z * currentSpeed * dt;
           const detZ = en.mesh.position.z + toPlayer.x * currentSpeed * dt;

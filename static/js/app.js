@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("[ZeroHour] Initializing Instant First-Person Tactical Controller...");
+  console.log("[ZeroHour] Initializing Alcatraz Tactical Controller with Dynamic Weather...");
 
   const screenMenu = document.getElementById("screen-menu");
   const screenBriefing = document.getElementById("screen-briefing");
@@ -16,6 +16,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const campaignTitle = document.getElementById("campaign-title");
   const metaCallsign = document.getElementById("meta-callsign");
   const metaDifficulty = document.getElementById("meta-difficulty");
+  const metaWeather = document.getElementById("meta-weather");
   const metaClutter = document.getElementById("meta-clutter");
   const missionHeading = document.getElementById("mission-heading");
   const missionDesc = document.getElementById("mission-desc");
@@ -44,6 +45,7 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnReturnBriefing = document.getElementById("btn-return-briefing");
 
   let selectedDifficulty = "veteran";
+  let selectedWeather = "spring";
   let currentSession = {
     session_id: "ZH-" + Math.floor(Math.random() * 90000 + 10000),
     callsign: "BRAVO-SIX",
@@ -85,8 +87,8 @@ document.addEventListener("DOMContentLoaded", () => {
       if (pointerlockOverlay) pointerlockOverlay.classList.add("hidden");
 
       if (isVictory) {
-        if (debriefTag) debriefTag.textContent = "MISSION ACCOMPLISHED // CLEANUP PROPOSAL UNLOCKED";
-        if (debriefTitle) debriefTitle.textContent = "TACTICAL EXECUTION PANEL";
+        if (debriefTag) debriefTag.textContent = "ALCATRAZ SECURED // CLEANUP PROPOSAL UNLOCKED";
+        if (debriefTitle) debriefTitle.textContent = "TACTICAL EXECUTION & ROI REPORT";
       } else {
         if (debriefTag) debriefTag.textContent = "CRITICAL FAILURE // KIA";
         if (debriefTitle) debriefTitle.textContent = "OPERATOR DOWN";
@@ -95,8 +97,7 @@ document.addEventListener("DOMContentLoaded", () => {
       if (resPurged) resPurged.textContent = stats.purged;
       if (resAccuracy) resAccuracy.textContent = stats.accuracy + "%";
       if (resHealth) resHealth.textContent = stats.health + "%";
-      
-      // Calculate Real-World ROI & Time Saved for Hackathon Judges
+
       const storageEl = document.getElementById("roi-storage");
       const timeEl = document.getElementById("roi-time");
       if (storageEl) storageEl.textContent = "~" + Math.round(stats.purged * 8.4) + " MB";
@@ -126,6 +127,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
+  // DIFFICULTY SELECTOR
   function setDifficulty(diff) {
     selectedDifficulty = (diff || "veteran").toLowerCase();
     document.querySelectorAll(".diff-btn").forEach(btn => {
@@ -139,6 +141,19 @@ document.addEventListener("DOMContentLoaded", () => {
     btn.addEventListener("click", (e) => {
       e.preventDefault();
       setDifficulty(btn.getAttribute("data-val"));
+    });
+  });
+
+  // WEATHER SELECTOR
+  document.querySelectorAll(".weather-btn").forEach(btn => {
+    btn.addEventListener("click", (e) => {
+      e.preventDefault();
+      document.querySelectorAll(".weather-btn").forEach(b => b.classList.remove("selected"));
+      btn.classList.add("selected");
+      selectedWeather = btn.getAttribute("data-weather") || "spring";
+      if (metaWeather) metaWeather.textContent = selectedWeather.toUpperCase();
+      const g = getOrInitGame();
+      if (g) g.applyWeather(selectedWeather);
     });
   });
 
@@ -178,6 +193,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (metaCallsign) metaCallsign.textContent = callsign;
     if (metaDifficulty) metaDifficulty.textContent = selectedDifficulty.toUpperCase();
+    if (metaWeather) metaWeather.textContent = selectedWeather.toUpperCase();
 
     screenMenu.classList.add("hidden");
     screenBriefing.classList.remove("hidden");
@@ -219,8 +235,8 @@ document.addEventListener("DOMContentLoaded", () => {
         currentSession.threats.push({
           id: "THR-" + String(i).padStart(3, "0"),
           sender: "Cyber Drone #" + i,
-          sender_email: "drone-" + i + "@threat.internal",
-          subject: "Hostile Clutter Vector #" + i,
+          sender_email: "drone-" + i + "@alcatraz-threat.org",
+          subject: "Alcatraz Infiltration Vector #" + i,
           category: ["phishing", "spam", "promotions", "newsletter"][i % 4],
           threat_level: (i % 5) + 1
         });
@@ -245,7 +261,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // INSTANT INGRESS: DEPLOY STRAIGHT INTO 3D GAMEPLAY (ZERO DELAY / ZERO HANG)
+  // DEPLOY DIRECTLY INTO ALCATRAZ MAP
   if (btnDeploy) {
     btnDeploy.addEventListener("click", () => {
       if (window.soundEngine) {
@@ -254,15 +270,14 @@ document.addEventListener("DOMContentLoaded", () => {
       }
       screenBriefing.classList.add("hidden");
 
-      // SHOW HUD & POINTER LOCK IMMEDIATELY
       if (pointerlockOverlay) pointerlockOverlay.classList.remove("hidden");
       if (tacticalHud) tacticalHud.classList.remove("hidden");
 
       const g = getOrInitGame();
       if (g) {
-        g.loadSession(currentSession.threats || [], selectedDifficulty);
+        g.loadSession(currentSession.threats || [], selectedDifficulty, selectedWeather);
         if (hudCallsign) hudCallsign.textContent = currentSession.callsign;
-        g.camera.position.set(0, 1.7, 12);
+        g.camera.position.set(0, 1.7, 42);
         if (g.weaponRig) g.weaponRig.position.copy(g.hipPos);
         g.render();
       }
@@ -352,7 +367,7 @@ document.addEventListener("DOMContentLoaded", () => {
         g.player.health = 100;
         g.player.ammoClip = 30;
         g.player.ammoReserve = 120;
-        g.loadSession(currentSession.threats || [], selectedDifficulty);
+        g.loadSession(currentSession.threats || [], selectedDifficulty, selectedWeather);
       }
       if (btnDeploy) btnDeploy.click();
     });

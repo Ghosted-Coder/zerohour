@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>ZEROHOUR // Alcatraz Open-World Tactical Infiltration</title>
-  <link rel="stylesheet" href="/static/css/style.css?v=20261101">
+  <link rel="stylesheet" href="/static/css/style.css?v=20261102">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -14,7 +14,7 @@
   <a href="#fps-canvas" class="skip-link">Skip to gameplay</a>
 
   <main id="main-content">
-    <!-- SCREEN 1: REGISTRATION -->
+    <!-- SCREEN 1: REGISTRATION & WEATHER SELECTOR -->
     <section id="screen-menu" class="overlay-screen active" aria-label="Operator Ingress Terminal">
       <div class="terminal-frame">
         <header class="terminal-badge">
@@ -22,7 +22,7 @@
           <span id="badge-auth-status">ALCATRAZ ISLAND // SECTOR REBIRTH</span>
         </header>
         <h1 class="chrome-title">ZEROHOUR</h1>
-        <p class="chrome-subtitle">OPERATION DIGITAL RECKONING // OPEN-WORLD INFILTRATION</p>
+        <p class="chrome-subtitle">OPERATION DIGITAL RECKONING // OPEN-WORLD COMBAT</p>
         
         <form id="form-registration" class="terminal-form" onsubmit="return false;" novalidate>
           <div class="form-row">
@@ -42,8 +42,9 @@
             </div>
           </div>
 
+          <!-- DIFFICULTY SELECTOR -->
           <fieldset class="form-row diff-fieldset">
-            <legend id="lbl-diff">OPERATION INTENSITY (DIFFICULTY)</legend>
+            <legend id="lbl-diff">OPERATION INTENSITY</legend>
             <div class="diff-grid" id="diff-selector" role="radiogroup" aria-labelledby="lbl-diff">
               <button type="button" class="diff-btn" data-val="recruit" role="radio" aria-checked="false">
                 <span class="diff-title">RECRUIT</span>
@@ -57,6 +58,17 @@
                 <span class="diff-title">ELITE</span>
                 <span class="diff-sub">32 + BOSS</span>
               </button>
+            </div>
+          </fieldset>
+
+          <!-- 4 PROCEDURAL WEATHERS SELECTOR -->
+          <fieldset class="form-row diff-fieldset">
+            <legend>ENVIRONMENT WEATHER RIG</legend>
+            <div class="weather-grid" id="weather-selector" role="radiogroup">
+              <button type="button" class="weather-btn" data-weather="sunny">☀️ SUNNY</button>
+              <button type="button" class="weather-btn" data-weather="rainy">🌧️ RAIN</button>
+              <button type="button" class="weather-btn selected" data-weather="spring">🌸 SPRING (TREES)</button>
+              <button type="button" class="weather-btn" data-weather="snow">❄️ SNOW</button>
             </div>
           </fieldset>
 
@@ -79,7 +91,7 @@
           <h2 id="campaign-title">OPERATION DIGITAL RECKONING</h2>
           <div class="briefing-meta">
             <span>OPERATOR: <strong id="meta-callsign" class="chrome-text">BRAVO-SIX</strong></span>
-            <span>SECTOR: <strong class="chrome-text">ALCATRAZ PENITENTIARY</strong></span>
+            <span>WEATHER: <strong id="meta-weather" class="chrome-text color-cyan">SPRING (LUSH TREES)</strong></span>
             <span>STATUS: <strong id="meta-clutter" class="chrome-text color-red">78.5% CLUTTER</strong></span>
           </div>
         </header>
@@ -87,7 +99,7 @@
         <div class="briefing-body">
           <article class="briefing-intel">
             <h3 id="mission-heading">PRIMARY MISSION: PURGE COMMERCIAL SATURATION</h3>
-            <p id="mission-desc">Hostile cyber-mercenary squads have locked down Alcatraz Island. Infiltrate the courtyard, breach the Cellhouse, and neutralize the data nodes.</p>
+            <p id="mission-desc">Hostile cyber-mercenary squads have locked down Alcatraz Island. Breached cellhouse entrances are open. Eliminate target clusters with full-auto fire.</p>
             <div class="intel-bullet">
               <strong>TARGETED CLUTTER SENDER CLUSTERS:</strong>
               <ul id="mission-target-list" class="target-list">
@@ -135,10 +147,15 @@
     <!-- TACTICAL HUD -->
     <div id="tactical-hud" class="tactical-hud hidden" aria-label="Tactical Heads-Up Display">
       
-      <!-- TOP-LEFT: COD-STYLE UAV TACTICAL RADAR MINIMAP -->
+      <!-- TOP-LEFT: UAV RADAR MINIMAP -->
       <div class="hud-uav-wrap">
         <canvas id="hud-uav-canvas" width="130" height="130"></canvas>
         <div class="uav-label">UAV RADAR // 60M</div>
+      </div>
+
+      <!-- LAST 4 ENEMIES LOCATOR BANNER -->
+      <div id="locator-banner" class="locator-banner hidden">
+        <span>⚠️ TARGET LOCATOR ACTIVE: <strong id="nearest-target-dist">NEAREST: 35m</strong> ⚠️</span>
       </div>
 
       <!-- Crosshair & Visual FX -->
@@ -155,7 +172,7 @@
 
       <!-- Top Center Objective Bar -->
       <header class="hud-objective-bar">
-        <div class="obj-badge" id="hud-mission-badge">ALCATRAZ CLUTTER RADAR</div>
+        <div class="obj-badge" id="hud-mission-badge">ALCATRAZ THREAT RADAR</div>
         <div class="obj-text" id="hud-objective-text" aria-live="polite">THREATS SCATTERED: 0 ACTIVE [ 0 / 0 PURGED ]</div>
       </header>
 
@@ -181,7 +198,6 @@
           <span id="health-val" class="health-val">100</span>
         </div>
 
-        <!-- KILLSTREAK: EMP ABILITY -->
         <div class="emp-meter-wrap">
           <span class="hud-lbl" id="emp-lbl">EMP [Q]</span>
           <div class="emp-bar">
@@ -191,7 +207,7 @@
         </div>
       </div>
 
-      <!-- Bottom Right: M4A1 Ammo Display -->
+      <!-- Bottom Right: Ammo Display -->
       <div class="hud-bottom-right">
         <div class="weapon-name">M4A1 CARBINE // 5.56 NATO [RED-DOT]</div>
         <div class="ammo-display" aria-label="Ammunition counter">
@@ -206,14 +222,13 @@
     </div>
   </div>
 
-  <!-- SCREEN 4: TACTICAL EXECUTION PANEL (WITH ROI / TIME-SAVED METRICS) -->
+  <!-- SCREEN 4: DEBRIEF & ROI REPORT -->
   <div id="modal-debrief" class="modal-backdrop hidden" role="dialog" aria-modal="true">
     <div class="terminal-frame modal-frame">
       <div class="modal-tag" id="debrief-tag">ALCATRAZ SECURED // CLEANUP PROPOSAL UNLOCKED</div>
       <h2 id="debrief-title" class="chrome-title">TACTICAL EXECUTION &amp; ROI REPORT</h2>
       <p id="debrief-desc">Combat mission verified. Review your real-world inbox impact below:</p>
 
-      <!-- QUANTITATIVE ROI & TIME SAVED CALCULATOR -->
       <div class="roi-stats-grid">
         <div class="roi-stat-box">
           <span class="roi-val" id="roi-storage">~184 MB</span>
@@ -256,8 +271,8 @@
     </div>
   </div>
 
-  <script src="/static/js/audio.js?v=20261101"></script>
-  <script src="/static/js/game3d.js?v=20261101"></script>
-  <script src="/static/js/app.js?v=20261101"></script>
+  <script src="/static/js/audio.js?v=20261102"></script>
+  <script src="/static/js/game3d.js?v=20261102"></script>
+  <script src="/static/js/app.js?v=20261102"></script>
 </body>
 </html>
