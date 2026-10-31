@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ZEROHOUR // Operation Digital Reckoning</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body class="crt-overlay">
+  <div id="sr-announcer" class="sr-only" aria-live="polite"></div>
+  <header class="tactical-hud-top" role="banner">
+    <div class="hud-group"><span class="hud-label">PROTOCOL</span><span class="hud-value neon-teal">ZEROHOUR // V1.0</span></div>
+    <div class="hud-group"><span class="hud-label">INBOX THREAT LEVEL</span><span class="hud-value neon-amber" id="hud-inbox-remaining">5,000 SIGNALS</span></div>
+    <div class="hud-group"><span class="hud-label">SCORE</span><span class="hud-value neon-green" id="hud-score">000000</span></div>
+    <div class="hud-group"><span class="hud-label">COMBO STREAK</span><span class="hud-value neon-crimson" id="hud-combo">x0 [READY]</span></div>
+    <div class="hud-group sound-controls">
+      <button id="btn-audio-toggle" class="btn-tactical btn-icon" aria-label="Toggle Audio"><span id="audio-icon">🔊</span></button>
+      <button id="btn-calm-toggle" class="btn-tactical" aria-label="Toggle Calm Mode">CALM: <span id="calm-status">OFF</span></button>
+    </div>
+  </header>
+  <main id="game-viewport">
+    <section id="view-intro" class="game-view active">
+      <div class="cinematic-container">
+        <div class="terminal-box">
+          <div class="terminal-header"><span class="blinking-dot"></span> SECURE TRANSMISSION // DEFCON 1 <button id="btn-skip-intro" class="btn-link">SKIP [ESC]</button></div>
+          <div class="terminal-body" id="intro-terminal-text"></div>
+          <div class="terminal-footer">
+            <div id="intro-controls" class="hidden">
+              <button id="btn-launch-demo" class="btn-tactical btn-primary">INITIALIZE OPERATION (DEMO INBOX)</button>
+              <label class="btn-tactical btn-secondary upload-label">DEPLOY CUSTOM DATA (.MBOX / .CSV)<input type="file" id="file-upload-input" accept=".mbox,.csv,.txt" class="sr-only"></label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+    <section id="view-map" class="game-view">
+      <canvas id="tactical-canvas"></canvas>
+      <div class="map-overlay">
+        <div class="sector-legend">
+          <div class="legend-item"><span class="legend-color node-regular"></span> BROADCAST NODE</div>
+          <div class="legend-item"><span class="legend-color node-promo"></span> COMMERCIAL TARGET</div>
+          <div class="legend-item"><span class="legend-color node-protected"></span> SHIELDED VAULT</div>
+          <div class="legend-item"><span class="legend-color node-boss"></span> HIGH-VALUE THREAT</div>
+        </div>
+        <div class="wave-tracker"><span class="hud-label">CURRENT WAVE</span><span class="wave-value" id="hud-wave-display">WAVE 1 // SECTOR ALPHA</span></div>
+      </div>
+      <aside id="target-intel-panel" class="intel-panel hidden">
+        <div class="intel-header">
+          <div class="intel-title-group">
+            <span class="intel-tag" id="intel-category-badge">CATEGORY: UNKNOWN</span>
+            <h2 class="intel-codename" id="intel-sender-name">TARGET</h2>
+            <div class="intel-address" id="intel-sender-address">sender@unknown</div>
+          </div>
+          <button id="btn-close-intel" class="btn-close">×</button>
+        </div>
+        <div class="intel-body">
+          <div class="intel-telemetry-grid">
+            <div class="telemetry-item"><span class="telemetry-label">PAYLOAD COUNT</span><span class="telemetry-val" id="intel-payload-count">0</span></div>
+            <div class="telemetry-item"><span class="telemetry-label">UNREAD RATIO</span><span class="telemetry-val" id="intel-unread-ratio">0%</span></div>
+            <div class="telemetry-item"><span class="telemetry-label">SIGNAL RANGE</span><span class="telemetry-val" id="intel-date-range">-</span></div>
+            <div class="telemetry-item"><span class="telemetry-label">THREAT STATUS</span><span class="telemetry-val" id="intel-boss-status">STANDARD</span></div>
+          </div>
+          <div class="intel-intel-box">
+            <div class="intel-section-title">DECRYPTED SIGNAL SAMPLES</div>
+            <ul class="intel-subjects-list" id="intel-sample-subjects"></ul>
+          </div>
+          <div class="intel-ai-recommendation">
+            <div class="ai-rec-header"><span class="ai-icon">▲</span><span id="intel-ai-source">RECON: GEMINI</span><span id="intel-ai-confidence">CONF: 95%</span></div>
+            <div class="ai-rec-reason" id="intel-ai-reason">Analysis ready.</div>
+          </div>
+        </div>
+        <div class="intel-commands">
+          <div class="command-grid">
+            <button id="cmd-archive" class="btn-command btn-archive"><span class="key-shortcut">[A]</span><span class="cmd-label">ARCHIVE</span><span class="cmd-desc">Secure to Repo</span></button>
+            <button id="cmd-trash" class="btn-command btn-trash"><span class="key-shortcut">[T]</span><span class="cmd-label">PURGE</span><span class="cmd-desc">Eliminate</span></button>
+            <button id="cmd-keep" class="btn-command btn-keep"><span class="key-shortcut">[K]</span><span class="cmd-label">PRESERVE</span><span class="cmd-desc">Maintain</span></button>
+            <button id="cmd-unsub" class="btn-command btn-unsub"><span class="key-shortcut">[U]</span><span class="cmd-label">TERMINATE</span><span class="cmd-desc">Opt-out</span></button>
+          </div>
+          <div class="intel-footer-commands">
+            <button id="cmd-undo" class="btn-tactical btn-undo"><span class="key-shortcut">[Z]</span> REVERT</button>
+            <button id="cmd-end-mission" class="btn-tactical btn-finish">DEBRIEF & EXPORT</button>
+          </div>
+        </div>
+      </aside>
+      <div id="boss-alert-modal" class="modal-overlay hidden"><div class="modal-card boss-card"><h2>⚠️ HIGH-VALUE THREAT DETECTED</h2><p id="boss-modal-desc"></p><button id="btn-engage-boss" class="btn-tactical btn-danger">ENGAGE TARGET</button></div></div>
+      <div id="confirm-modal" class="modal-overlay hidden"><div class="modal-card confirm-card"><h2>🛡️ SECURITY AUTHORIZATION</h2><p>This node contains critical receipts/security records. Confirm to purge.</p><button id="btn-cancel-confirm" class="btn-tactical">ABORT</button><button id="btn-execute-confirm" class="btn-tactical btn-danger">AUTHORIZE</button></div></div>
+    </section>
+    <section id="view-debrief" class="game-view">
+      <div class="debrief-container">
+        <div class="debrief-header"><h1>DIGITAL RECKONING // DEBRIEF</h1><p>Operation completed. Real Gmail filters available below.</p></div>
+        <div class="debrief-stats-grid">
+          <div class="debrief-stat-card"><span class="debrief-num neon-green" id="db-analyzed">0</span><span class="debrief-desc">Signals Ingested</span></div>
+          <div class="debrief-stat-card"><span class="debrief-num neon-teal" id="db-cleared">0</span><span class="debrief-desc">Threats Neutralized</span></div>
+          <div class="debrief-stat-card"><span class="debrief-num neon-amber" id="db-kept">0</span><span class="debrief-desc">Assets Preserved</span></div>
+          <div class="debrief-stat-card"><span class="debrief-num neon-crimson" id="db-time-saved">0.0m</span><span class="debrief-desc">Time Saved</span></div>
+        </div>
+        <div class="reconciliation-panel"><div class="recon-title">MATHEMATICAL AUDIT INVARIANT</div><div class="recon-math" id="db-recon-formula"></div><div class="recon-status neon-green">✓ 100% RECONCILED (ZERO MAIL LOST)</div></div>
+        <div class="artifacts-section">
+          <h2>MISSION ARTIFACTS</h2>
+          <div class="artifacts-btn-row">
+            <a id="download-filters" href="#" class="btn-artifact" download="filters.xml">📁 <strong>GMAIL FILTERS (filters.xml)</strong></a>
+            <a id="download-cleaned" href="#" class="btn-artifact" download="cleaned.csv">📊 <strong>AUDIT LEDGER (cleaned.csv)</strong></a>
+            <a id="download-unsub" href="#" class="btn-artifact" download="unsubscribe.csv">🔗 <strong>OPT-OUT LINKS (unsubscribe.csv)</strong></a>
+          </div>
+        </div>
+        <div class="leaderboard-box">
+          <h2>SUBMIT SCORE TO HIGH COMMAND</h2>
+          <form id="form-leaderboard" class="lb-form"><input type="text" id="lb-nickname" placeholder="CALLSIGN" maxlength="16" required><button type="submit" class="btn-tactical btn-primary">SUBMIT</button></form>
+          <div id="lb-leaderboard-list"></div>
+        </div>
+        <div class="debrief-actions"><button id="btn-redeploy" class="btn-tactical btn-primary">REDEPLOY OPERATION</button></div>
+      </div>
+    </section>
+  </main>
+  <script src="/audio.js"></script>
+  <script src="/game.js"></script>
+</body>
+</html>

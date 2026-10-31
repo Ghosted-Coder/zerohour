@@ -1,0 +1,78 @@
+:root {
+  --bg-dark: #05080c; --bg-panel: #0b1118; --bg-panel-trans: rgba(11, 17, 24, 0.92);
+  --border-dim: #192533; --border-bright: #29435c;
+  --teal: #00f3ff; --teal-glow: rgba(0, 243, 255, 0.4);
+  --crimson: #ff2a55; --crimson-glow: rgba(255, 42, 85, 0.45);
+  --amber: #ffaa00; --green: #00ff88;
+  --text-main: #d8e5f2; --text-dim: #70869d;
+  --font-mono: "SF Mono", "Fira Code", monospace;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: var(--bg-dark); color: var(--text-main); font-family: var(--font-mono); overflow: hidden; height: 100vh; width: 100vw; user-select: none; }
+.crt-overlay::before { content: " "; position: absolute; top:0; left:0; bottom:0; right:0; background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255,0,0,0.03), rgba(0,255,0,0.01), rgba(0,0,255,0.03)); z-index: 1000; background-size: 100% 3px, 6px 100%; pointer-events: none; }
+.sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); border: 0; }
+.tactical-hud-top { position: absolute; top: 0; left: 0; right: 0; height: 52px; background: rgba(5, 8, 12, 0.95); border-bottom: 1px solid var(--border-bright); display: flex; align-items: center; justify-content: space-between; padding: 0 20px; z-index: 100; }
+.hud-group { display: flex; flex-direction: column; }
+.hud-label { font-size: 0.65rem; color: var(--text-dim); }
+.hud-value { font-size: 0.95rem; font-weight: bold; }
+.neon-teal { color: var(--teal); text-shadow: 0 0 8px var(--teal-glow); }
+.neon-crimson { color: var(--crimson); text-shadow: 0 0 8px var(--crimson-glow); }
+.neon-amber { color: var(--amber); } .neon-green { color: var(--green); }
+.sound-controls { display: flex; flex-direction: row; gap: 10px; }
+.btn-tactical { background: var(--bg-panel); color: var(--teal); border: 1px solid var(--teal); padding: 8px 16px; font-family: var(--font-mono); font-size: 0.8rem; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+.btn-tactical:hover { background: var(--teal); color: var(--bg-dark); }
+.btn-primary { background: #00363d; } .btn-danger { color: var(--crimson); border-color: var(--crimson); background: #3d0011; }
+#game-viewport { position: relative; width: 100vw; height: calc(100vh - 52px); margin-top: 52px; }
+.game-view { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: none; }
+.game-view.active { display: block; }
+.cinematic-container { display: flex; align-items: center; justify-content: center; height: 100%; background: radial-gradient(circle at center, #0f1c29 0%, #05080c 70%); }
+.terminal-box { width: 760px; max-width: 90vw; background: var(--bg-panel-trans); border: 1px solid var(--border-bright); padding: 24px; box-shadow: 0 0 30px rgba(0, 243, 255, 0.15); }
+.terminal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-dim); padding-bottom: 12px; font-size: 0.75rem; color: var(--teal); }
+.blinking-dot { width: 8px; height: 8px; background: var(--crimson); border-radius: 50%; display: inline-block; margin-right: 6px; }
+.terminal-body { padding: 20px 0; font-size: 0.9rem; line-height: 1.6; min-height: 220px; color: #a7c2dc; }
+.terminal-footer { border-top: 1px solid var(--border-dim); padding-top: 16px; }
+.btn-link { background: none; border: none; color: var(--text-dim); cursor: pointer; font-family: var(--font-mono); font-size: 0.75rem; }
+#tactical-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+.map-overlay { position: absolute; top: 16px; left: 16px; pointer-events: none; display: flex; flex-direction: column; gap: 16px; }
+.sector-legend, .wave-tracker { background: var(--bg-panel-trans); border: 1px solid var(--border-dim); padding: 10px 16px; font-size: 0.7rem; }
+.legend-item { display: flex; align-items: center; gap: 8px; margin-bottom: 4px; }
+.legend-color { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.node-regular { background: var(--teal); } .node-promo { background: #39ff14; } .node-protected { background: var(--amber); } .node-boss { background: var(--crimson); }
+.intel-panel { position: absolute; top: 16px; right: 16px; bottom: 16px; width: 440px; max-width: 95vw; background: var(--bg-panel-trans); border: 1px solid var(--teal); box-shadow: -5px 0 25px rgba(0,0,0,0.7); display: flex; flex-direction: column; z-index: 50; transition: transform 0.25s ease; }
+.intel-panel.hidden { transform: translateX(calc(100% + 20px)); }
+.intel-header { padding: 16px; border-bottom: 1px solid var(--border-dim); display: flex; justify-content: space-between; }
+.intel-tag { font-size: 0.65rem; background: var(--border-dim); color: var(--teal); padding: 2px 6px; }
+.intel-codename { font-size: 1.15rem; color: #fff; margin-top: 4px; }
+.intel-address { font-size: 0.75rem; color: var(--text-dim); }
+.btn-close { background: none; border: none; color: var(--text-dim); font-size: 1.5rem; cursor: pointer; }
+.intel-body { padding: 16px; overflow-y: auto; flex: 1; display: flex; flex-direction: column; gap: 16px; }
+.intel-telemetry-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; background: rgba(0,0,0,0.3); padding: 10px; border: 1px solid var(--border-dim); }
+.telemetry-label { font-size: 0.6rem; color: var(--text-dim); display: block; }
+.telemetry-val { font-size: 0.8rem; font-weight: bold; color: var(--teal); }
+.intel-section-title { font-size: 0.65rem; color: var(--text-dim); margin-bottom: 6px; }
+.intel-subjects-list { list-style: none; font-size: 0.75rem; color: #b0c9e0; }
+.intel-subjects-list li { padding: 4px 0; border-bottom: 1px dashed rgba(255,255,255,0.06); }
+.intel-ai-recommendation { background: rgba(0, 243, 255, 0.05); border: 1px solid var(--teal); padding: 12px; }
+.ai-rec-header { display: flex; justify-content: space-between; font-size: 0.65rem; color: var(--teal); margin-bottom: 6px; }
+.ai-rec-reason { font-size: 0.8rem; color: #fff; line-height: 1.4; }
+.intel-commands { padding: 16px; border-top: 1px solid var(--border-dim); background: rgba(5,8,12,0.8); }
+.command-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 10px; }
+.btn-command { background: var(--bg-panel); border: 1px solid var(--border-bright); padding: 10px 8px; cursor: pointer; display: flex; flex-direction: column; align-items: center; color: #fff; }
+.btn-command:hover { border-color: var(--teal); background: #00363d; }
+.intel-footer-commands { display: flex; gap: 8px; }
+.btn-undo, .btn-finish { flex: 1; justify-content: center; font-size: 0.7rem; }
+.modal-overlay { position: absolute; top:0; left:0; right:0; bottom:0; background: rgba(0,0,0,0.85); display: flex; align-items: center; justify-content: center; z-index: 200; }
+.modal-card { width: 500px; max-width: 90vw; background: var(--bg-panel); border: 2px solid var(--border-bright); padding: 24px; }
+.boss-card { border-color: var(--crimson); }
+.debrief-container { max-width: 900px; margin: 40px auto; padding: 0 20px; max-height: calc(100vh - 120px); overflow-y: auto; }
+.debrief-stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin: 20px 0; }
+.debrief-stat-card { background: var(--bg-panel); border: 1px solid var(--border-dim); padding: 16px; display: flex; flex-direction: column; }
+.debrief-num { font-size: 1.8rem; font-weight: bold; }
+.debrief-desc { font-size: 0.7rem; color: var(--text-dim); }
+.reconciliation-panel, .artifacts-section, .leaderboard-box { background: var(--bg-panel); border: 1px solid var(--border-bright); padding: 16px; margin-bottom: 20px; }
+.artifacts-btn-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 12px; }
+.btn-artifact { background: rgba(0,0,0,0.3); border: 1px solid var(--border-bright); padding: 12px; text-decoration: none; color: #fff; font-size: 0.75rem; display: flex; align-items: center; gap: 8px; }
+.btn-artifact:hover { border-color: var(--teal); background: rgba(0,243,255,0.08); }
+.lb-form { display: flex; gap: 10px; margin: 10px 0; }
+.lb-form input { flex: 1; background: #000; border: 1px solid var(--border-bright); color: #fff; padding: 8px; font-family: var(--font-mono); }
+.debrief-actions { text-align: center; margin-bottom: 30px; }
