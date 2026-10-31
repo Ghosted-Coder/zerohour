@@ -1,5 +1,4 @@
 import pytest
-from bs4 import BeautifulSoup
 from fastapi.testclient import TestClient
 from app.main import app
 
@@ -19,7 +18,7 @@ def test_html_accessibility_structure():
     
     # 3. Canvas accessible landmark name & fallback text
     assert 'role="region"' in html
-    assert 'aria-label="3D Tactical Operations Theatre"' in html
+    assert 'aria-label="3D Alcatraz Island Battleground"' in html
     
     # 4. Semantic fieldset and legend for difficulty radio group
     assert '<fieldset' in html
