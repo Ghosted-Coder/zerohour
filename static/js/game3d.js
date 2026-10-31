@@ -1,6 +1,11 @@
 /**
  * ZEROHOUR 3D FIRST-PERSON SHOOTER ENGINE
- * Fixed: Zero JavaScript syntax errors, Strict YXZ Camera, Red Dot ADS, Fast Melee AI
+ * Upgrades:
+ *  - High-Fidelity 3D M4A1 Tactical Carbine Viewmodel
+ *  - Boss Entrance Animation & Ground Slam Shockwaves
+ *  - Procedural 130 BPM Combat Boss Soundtrack
+ *  - Improved GPNVG-18 Cyber Mercenary Soldier Models
+ *  - +10 Bots per difficulty (16, 24, 32)
  */
 class FPSGameEngine {
   constructor(canvasId, sound) {
@@ -44,7 +49,9 @@ class FPSGameEngine {
     this.fireRate = 0.08;
     this.lastShotTime = 0;
 
+    // Viewmodel components
     this.weaponRig = null;
+    this.weaponBolt = null;
     this.redDotMesh = null;
     this.muzzleLight = null;
     this.flashlight = null;
@@ -53,11 +60,15 @@ class FPSGameEngine {
     this.recoilOffset = 0;
     this.cockAnimOffset = 0;
 
+    // Entities & Boss
     this.threats = [];
     this.enemies = [];
     this.boss = null;
     this.bossSpawned = false;
+    this.bossIntroTimer = 0;
+    this.bossIntroActive = false;
     this.wallBoxes = [];
+    this.shockwaves = [];
 
     this.onKillThreat = null;
     this.onMissionEnd = null;
@@ -93,7 +104,7 @@ class FPSGameEngine {
     this.scene.add(dirLight);
 
     this.buildFacility();
-    this.buildWeaponViewmodel();
+    this.buildDetailedWeaponModel();
 
     window.addEventListener("resize", () => {
       this.camera.aspect = window.innerWidth / window.innerHeight;
@@ -102,44 +113,92 @@ class FPSGameEngine {
     });
   }
 
-  buildWeaponViewmodel() {
+  // HIGH-FIDELITY DETAILED TACTICAL M4A1 CARBINE MODEL
+  buildDetailedWeaponModel() {
     this.weaponRig = new THREE.Group();
 
-    const matReceiver = new THREE.MeshStandardMaterial({ color: 0x141820, roughness: 0.3, metalness: 0.8 });
-    const receiver = new THREE.Mesh(new THREE.BoxGeometry(0.065, 0.085, 0.38), matReceiver);
-    this.weaponRig.add(receiver);
+    const matDark = new THREE.MeshStandardMaterial({ color: 0x141820, roughness: 0.3, metalness: 0.85 });
+    const matSteel = new THREE.MeshStandardMaterial({ color: 0x222a36, roughness: 0.25, metalness: 0.9 });
+    const matGrip = new THREE.MeshStandardMaterial({ color: 0x0c0e12, roughness: 0.7 });
 
-    const handguard = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.07, 0.25), new THREE.MeshStandardMaterial({ color: 0x222a36, metalness: 0.85, roughness: 0.2 }));
-    handguard.position.set(0, 0.01, -0.26);
+    // 1. Lower & Upper Receiver Assembly
+    const lower = new THREE.Mesh(new THREE.BoxGeometry(0.062, 0.08, 0.36), matDark);
+    this.weaponRig.add(lower);
+
+    const upper = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.05, 0.3), matDark);
+    upper.position.set(0, 0.055, -0.04);
+    this.weaponRig.add(upper);
+
+    // 2. Picatinny Quad Rail System
+    const handguard = new THREE.Mesh(new THREE.BoxGeometry(0.054, 0.065, 0.28), matSteel);
+    handguard.position.set(0, 0.02, -0.28);
     this.weaponRig.add(handguard);
 
-    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.42, 12), matReceiver);
+    // Rail ribs
+    for (let rz = -0.4; rz <= -0.16; rz += 0.04) {
+      const rib = new THREE.Mesh(new THREE.BoxGeometry(0.058, 0.008, 0.015), matDark);
+      rib.position.set(0, 0.055, rz);
+      this.weaponRig.add(rib);
+    }
+
+    // 3. Ergonomic Angled Foregrip (AFG)
+    const afg = new THREE.Mesh(new THREE.BoxGeometry(0.04, 0.06, 0.12), matGrip);
+    afg.position.set(0, -0.035, -0.26);
+    afg.rotation.x = -0.3;
+    this.weaponRig.add(afg);
+
+    // 4. Heavy Barrel & Birdcage Flash Hider
+    const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.014, 0.014, 0.44, 12), matSteel);
     barrel.rotation.x = Math.PI / 2;
-    barrel.position.set(0, 0.02, -0.38);
+    barrel.position.set(0, 0.025, -0.42);
     this.weaponRig.add(barrel);
 
-    const sight = new THREE.Mesh(new THREE.BoxGeometry(0.044, 0.05, 0.07), new THREE.MeshStandardMaterial({ color: 0x0a0c10 }));
-    sight.position.set(0, 0.07, -0.05);
-    this.weaponRig.add(sight);
+    const muzzleHider = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.018, 0.06, 12), matDark);
+    muzzleHider.rotation.x = Math.PI / 2;
+    muzzleHider.position.set(0, 0.025, -0.63);
+    this.weaponRig.add(muzzleHider);
 
+    // 5. Blowback Bolt in Ejection Port
+    this.weaponBolt = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.025, 0.08), matSteel);
+    this.weaponBolt.position.set(0.028, 0.055, -0.04);
+    this.weaponRig.add(this.weaponBolt);
+
+    // 6. EOTech Holographic Sight Housing & Lens
+    const sightHood = new THREE.Mesh(new THREE.BoxGeometry(0.046, 0.052, 0.09), matGrip);
+    sightHood.position.set(0, 0.095, -0.05);
+    this.weaponRig.add(sightHood);
+
+    const glass = new THREE.Mesh(new THREE.PlaneGeometry(0.032, 0.034), new THREE.MeshBasicMaterial({ color: 0x112233, transparent: true, opacity: 0.35 }));
+    glass.position.set(0, 0.095, -0.09);
+    this.weaponRig.add(glass);
+
+    // Holographic Red Dot Reticle
     const redDotMat = new THREE.MeshBasicMaterial({ color: 0xff0033 });
-    this.redDotMesh = new THREE.Mesh(new THREE.CircleGeometry(0.003, 16), redDotMat);
-    this.redDotMesh.position.set(0, 0.07, -0.076);
+    this.redDotMesh = new THREE.Mesh(new THREE.CircleGeometry(0.0032, 16), redDotMat);
+    this.redDotMesh.position.set(0, 0.095, -0.091);
     this.weaponRig.add(this.redDotMesh);
 
-    const mag = new THREE.Mesh(new THREE.BoxGeometry(0.038, 0.17, 0.075), new THREE.MeshStandardMaterial({ color: 0x1f2530 }));
+    // 7. 30-Round Curved STANAG Magazine
+    const mag = new THREE.Mesh(new THREE.BoxGeometry(0.038, 0.19, 0.08), matDark);
     mag.position.set(0, -0.11, -0.04);
     mag.rotation.x = 0.22;
     this.weaponRig.add(mag);
 
-    this.flashlight = new THREE.SpotLight(0xddeeff, 2.6, 38, Math.PI / 4, 0.35, 1.2);
-    this.flashlight.position.set(0.05, 0.02, -0.4);
+    // 8. SOPMOD Collapsible Stock & Buffer Tube
+    const stock = new THREE.Mesh(new THREE.BoxGeometry(0.048, 0.11, 0.18), matGrip);
+    stock.position.set(0, -0.01, 0.24);
+    this.weaponRig.add(stock);
+
+    // 9. Tactical Flashlight
+    this.flashlight = new THREE.SpotLight(0xddeeff, 2.8, 40, Math.PI / 4, 0.35, 1.2);
+    this.flashlight.position.set(0.05, 0.02, -0.42);
     this.flashlight.target.position.set(0.05, 0.02, -10);
     this.weaponRig.add(this.flashlight);
     this.weaponRig.add(this.flashlight.target);
 
+    // Muzzle Flash
     this.muzzleLight = new THREE.PointLight(0xffaa22, 0, 18);
-    this.muzzleLight.position.set(0, 0.02, -0.6);
+    this.muzzleLight.position.set(0, 0.025, -0.66);
     this.weaponRig.add(this.muzzleLight);
 
     this.weaponRig.position.copy(this.hipPos);
@@ -307,7 +366,7 @@ class FPSGameEngine {
     this.player.slideDir.copy(moveDir);
   }
 
-  // ROBUST ENEMY SPAWNING (SAFELY PADDED, NO SYNTAX ERRORS)
+  // ROBUST ENEMY SPAWNING (+10 BOTS: RECRUIT 16, VETERAN 24, ELITE 32)
   loadSession(threats, diff = "veteran") {
     this.threats = threats || [];
     this.difficulty = (diff || "veteran").toLowerCase();
@@ -318,20 +377,22 @@ class FPSGameEngine {
       this.boss = null;
     }
     this.bossSpawned = false;
+    this.bossIntroActive = false;
 
-    if (this.threats.length === 0) {
-      const counts = { recruit: 6, veteran: 14, elite: 22 };
-      const num = counts[this.difficulty] || 14;
-      for (let k = 1; k <= num; k++) {
-        this.threats.push({
-          id: "THR-GEN-" + String(k).padStart(3, "0"),
-          sender: "Cluster Node #" + k,
-          sender_email: "node-" + k + "@threat.internal",
-          subject: "Automated Intrusion Threat #" + k,
-          category: ["phishing", "spam", "promotions", "newsletter"][k % 4],
-          threat_level: (k % 5) + 1
-        });
-      }
+    // +10 Bots Guarantee
+    const targetCounts = { recruit: 16, veteran: 24, elite: 32 };
+    const requiredNum = targetCounts[this.difficulty] || 24;
+
+    while (this.threats.length < requiredNum) {
+      const idx = this.threats.length + 1;
+      this.threats.push({
+        id: "THR-BOT-" + String(idx).padStart(3, "0"),
+        sender: "Cyber Drone #" + idx,
+        sender_email: "drone-" + idx + "@inbox-threat.org",
+        subject: "Automated Clutter Surge #" + idx,
+        category: ["phishing", "spam", "promotions", "newsletter"][idx % 4],
+        threat_level: (idx % 5) + 1
+      });
     }
 
     this.threats.forEach((th, i) => {
@@ -356,45 +417,65 @@ class FPSGameEngine {
       });
     });
 
-    console.log("[ZeroHour 3D] Spawned " + this.enemies.length + " enemies in " + this.difficulty.toUpperCase() + " mode.");
+    console.log("[ZeroHour 3D] Spawned " + this.enemies.length + " bots in " + this.difficulty.toUpperCase() + " mode.");
   }
 
+  // IMPROVED GPNVG-18 CYBER MERCENARY SOLDIER MODEL
   createSoldierMesh(cat, isBoss = false) {
     const group = new THREE.Group();
-    const scale = isBoss ? 1.7 : 1.0;
-    const visorColor = isBoss ? 0xff0022 : (cat === "phishing" ? 0xff2244 : 0xe2e8f0);
+    const scale = isBoss ? 2.2 : 1.0;
+    const visorColor = isBoss ? 0xff0022 : (cat === "phishing" ? 0xff2244 : 0x00e1ff);
 
-    const camoMat = new THREE.MeshStandardMaterial({ color: isBoss ? 0x0a0c10 : 0x1f2633, roughness: 0.4 });
-    const vestMat = new THREE.MeshStandardMaterial({ color: isBoss ? 0x1a0508 : 0x121720, roughness: 0.3, metalness: 0.5 });
-    const armorPlateMat = new THREE.MeshStandardMaterial({ color: 0x05070a, metalness: 0.9, roughness: 0.15 });
-    const skinMat = new THREE.MeshStandardMaterial({ color: 0x3a424e });
+    const camoMat = new THREE.MeshStandardMaterial({ color: isBoss ? 0x08090d : 0x1a212b, roughness: 0.4 });
+    const vestMat = new THREE.MeshStandardMaterial({ color: isBoss ? 0x1f0408 : 0x10141a, roughness: 0.3, metalness: 0.5 });
+    const armorPlateMat = new THREE.MeshStandardMaterial({ color: 0x05070a, metalness: 0.95, roughness: 0.15 });
+    const skinMat = new THREE.MeshStandardMaterial({ color: 0x333a44 });
     const meleeWeaponMat = new THREE.MeshStandardMaterial({ color: 0xdde4ec, metalness: 0.95, roughness: 0.1 });
 
-    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.55 * scale, 0.72 * scale, 0.34 * scale), camoMat);
+    // Torso with MOLLE Webbing
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.55 * scale, 0.74 * scale, 0.35 * scale), camoMat);
     torso.position.y = 1.1 * scale;
     group.add(torso);
 
-    const vest = new THREE.Mesh(new THREE.BoxGeometry(0.58 * scale, 0.58 * scale, 0.38 * scale), vestMat);
+    const vest = new THREE.Mesh(new THREE.BoxGeometry(0.58 * scale, 0.6 * scale, 0.38 * scale), vestMat);
     vest.position.y = 1.15 * scale;
     group.add(vest);
 
+    // Front ammo pouches
+    for (let p = -0.16; p <= 0.16; p += 0.16) {
+      const pouch = new THREE.Mesh(new THREE.BoxGeometry(0.12 * scale, 0.19 * scale, 0.09 * scale), armorPlateMat);
+      pouch.position.set(p * scale, 1.05 * scale, 0.22 * scale);
+      group.add(pouch);
+    }
+
+    // Head with FAST Helmet
     const head = new THREE.Mesh(new THREE.SphereGeometry(0.2 * scale, 16, 16), skinMat);
     head.position.y = 1.64 * scale;
     group.add(head);
 
-    const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.23 * scale, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.55), vestMat);
+    const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.235 * scale, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.55), vestMat);
     helmet.position.y = 1.67 * scale;
     group.add(helmet);
 
-    const visor = new THREE.Mesh(new THREE.BoxGeometry(0.28 * scale, 0.08 * scale, 0.12 * scale), new THREE.MeshBasicMaterial({ color: visorColor }));
-    visor.position.set(0, 1.65 * scale, 0.17 * scale);
-    group.add(visor);
+    // Quad-Tube GPNVG-18 Night Vision Visor
+    const visorCenter = new THREE.Mesh(new THREE.BoxGeometry(0.28 * scale, 0.08 * scale, 0.12 * scale), new THREE.MeshBasicMaterial({ color: visorColor }));
+    visorCenter.position.set(0, 1.65 * scale, 0.18 * scale);
+    group.add(visorCenter);
 
-    const bladeArm = new THREE.Mesh(new THREE.BoxGeometry(0.06 * scale, 0.08 * scale, 0.65 * scale), meleeWeaponMat);
-    bladeArm.position.set(0.25 * scale, 1.05 * scale, 0.28 * scale);
+    for (let t = -0.1; t <= 0.1; t += 0.065) {
+      const tube = new THREE.Mesh(new THREE.CylinderGeometry(0.02 * scale, 0.02 * scale, 0.1 * scale, 8), new THREE.MeshBasicMaterial({ color: visorColor }));
+      tube.rotation.x = Math.PI / 2;
+      tube.position.set(t * scale, 1.65 * scale, 0.24 * scale);
+      group.add(tube);
+    }
+
+    // Heavy Tactical Weapon (Spiked Hydraulic Mace / Machete)
+    const bladeArm = new THREE.Mesh(new THREE.BoxGeometry(0.08 * scale, 0.09 * scale, 0.72 * scale), meleeWeaponMat);
+    bladeArm.position.set(0.26 * scale, 1.05 * scale, 0.32 * scale);
     bladeArm.rotation.x = 0.35;
     group.add(bladeArm);
 
+    // Legs
     const legGeo = new THREE.BoxGeometry(0.2 * scale, 0.75 * scale, 0.22 * scale);
     const leftLeg = new THREE.Mesh(legGeo, camoMat);
     leftLeg.position.set(-0.16 * scale, 0.38 * scale, 0);
@@ -408,13 +489,20 @@ class FPSGameEngine {
     return group;
   }
 
+  // CINEMATIC BOSS ENTRANCE & BATTLE COMMENCEMENT
   spawnBoss() {
     if (this.bossSpawned) return;
     this.bossSpawned = true;
-    if (this.sound) this.sound.playBossAlert();
+    this.bossIntroActive = true;
+    this.bossIntroTimer = 2.5;
+
+    if (this.sound) {
+      this.sound.playBossAlert();
+      this.sound.startBossBattleMusic(); // Start 130 BPM boss battle soundtrack!
+    }
 
     const bossMesh = this.createSoldierMesh("phishing", true);
-    bossMesh.position.set(0, 0, -25);
+    bossMesh.position.set(0, 8.0, -25); // Drops from above!
     this.scene.add(bossMesh);
 
     this.boss = {
@@ -433,6 +521,17 @@ class FPSGameEngine {
     if (bBar) bBar.classList.remove("hidden");
   }
 
+  // SPAWN GROUND SLAM SHOCKWAVE PARTICLE RING
+  createShockwave(pos) {
+    const geo = new THREE.RingGeometry(0.5, 1.2, 32);
+    const mat = new THREE.MeshBasicMaterial({ color: 0xff1133, side: THREE.DoubleSide, transparent: true, opacity: 0.9 });
+    const ring = new THREE.Mesh(geo, mat);
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.set(pos.x, 0.05, pos.z);
+    this.scene.add(ring);
+    this.shockwaves.push({ mesh: ring, scale: 1.0, opacity: 0.9 });
+  }
+
   shoot() {
     if (this.player.isReloading) return;
     if (this.player.ammoClip <= 0) {
@@ -444,11 +543,16 @@ class FPSGameEngine {
     this.player.shotsFired += 1;
     if (this.sound) this.sound.playGunshot(this.player.isADS);
 
+    // Dynamic Viewmodel Recoil & Bolt Blowback Animation
     this.recoilOffset = 0.055;
     this.pitch += 0.011;
+    if (this.weaponBolt) this.weaponBolt.position.z = 0.02;
 
-    this.muzzleLight.intensity = 3.8;
-    setTimeout(() => { this.muzzleLight.intensity = 0; }, 35);
+    this.muzzleLight.intensity = 4.0;
+    setTimeout(() => {
+      this.muzzleLight.intensity = 0;
+      if (this.weaponBolt) this.weaponBolt.position.z = -0.04;
+    }, 35);
 
     const raycaster = new THREE.Raycaster();
     raycaster.setFromCamera(new THREE.Vector2(0, 0), this.camera);
@@ -497,12 +601,14 @@ class FPSGameEngine {
     if (enemy.isBoss) {
       const bBar = document.getElementById("boss-hud-bar");
       if (bBar) bBar.classList.add("hidden");
+      if (this.sound) this.sound.stopBossBattleMusic();
     }
 
     if (this.onKillThreat) {
       this.onKillThreat(enemy.id, enemy.subject, this.threats.length - this.enemies.filter(e => !e.isBoss).length, this.threats.length);
     }
 
+    // Spawn Boss at 50% threat eradication
     if (!this.bossSpawned && this.enemies.length <= Math.floor(this.threats.length / 2)) {
       this.spawnBoss();
     }
@@ -528,6 +634,7 @@ class FPSGameEngine {
 
   triggerMissionEnd(isVictory) {
     this.isLocked = false;
+    if (this.sound) this.sound.stopBossBattleMusic();
     document.exitPointerLock();
     if (this.onMissionEnd) {
       const accuracy = this.player.shotsFired > 0 ? Math.round((this.player.shotsHit / this.player.shotsFired) * 100) : 0;
@@ -542,6 +649,7 @@ class FPSGameEngine {
   update(dt) {
     const now = performance.now() / 1000;
 
+    // Cutscene Camera Sweep
     if (this.isCutscene) {
       this.cutsceneTime += dt;
       const progress = Math.min(this.cutsceneTime / this.cutsceneDuration, 1.0);
@@ -561,6 +669,7 @@ class FPSGameEngine {
 
     if (!this.isLocked) return;
 
+    // Full-Automatic Spray
     if (this.mouse.left && !this.player.isReloading) {
       if (now - this.lastShotTime >= this.fireRate) {
         this.lastShotTime = now;
@@ -568,6 +677,7 @@ class FPSGameEngine {
       }
     }
 
+    // Movement & Sliding
     let targetCameraY = 1.7;
 
     if (this.player.isSliding) {
@@ -589,7 +699,6 @@ class FPSGameEngine {
     }
 
     this.player.position.y += (targetCameraY - this.player.position.y) * 12 * dt;
-
     this.player.velocity.y -= 18 * dt;
     this.player.position.y += this.player.velocity.y * dt;
 
@@ -605,15 +714,58 @@ class FPSGameEngine {
     this.camera.position.copy(this.player.position);
     this.camera.rotation.set(this.pitch, this.yaw, 0, 'YXZ');
 
+    // Procedural weapon sway & breathing
+    const swayX = Math.sin(now * 3) * 0.003;
+    const swayY = Math.cos(now * 6) * 0.002;
+
     const targetPos = this.player.isADS ? this.adsPos : this.hipPos;
     this.weaponRig.position.lerp(targetPos, 0.22);
+    this.weaponRig.position.x += swayX;
+    this.weaponRig.position.y += swayY;
     this.weaponRig.position.z += this.recoilOffset;
     this.recoilOffset *= 0.78;
 
     const targetRoll = this.player.isSliding ? 0.35 : 0;
     this.weaponRig.rotation.z += (targetRoll - this.weaponRig.rotation.z) * 10 * dt;
 
-    // FAST MELEE ENEMY PURSUIT
+    // BOSS ENTRANCE DROP ANIMATION
+    if (this.boss && this.bossIntroActive) {
+      this.bossIntroTimer -= dt;
+      if (this.boss.mesh.position.y > 0) {
+        this.boss.mesh.position.y -= 14 * dt;
+      } else {
+        this.boss.mesh.position.y = 0;
+        if (this.bossIntroActive) {
+          this.bossIntroActive = false;
+          if (this.sound) this.sound.playBossSlam();
+          this.createShockwave(this.boss.mesh.position);
+          this.showDamageVignette();
+        }
+      }
+    }
+
+    // UPDATE EXPANDING GROUND SHOCKWAVES
+    for (let s = this.shockwaves.length - 1; s >= 0; s--) {
+      const sw = this.shockwaves[s];
+      sw.scale += 14 * dt;
+      sw.opacity -= 0.9 * dt;
+      sw.mesh.scale.set(sw.scale, sw.scale, 1);
+      sw.mesh.material.opacity = Math.max(0, sw.opacity);
+
+      // Damage player if caught in shockwave
+      const distToPlayer = this.player.position.distanceTo(sw.mesh.position);
+      if (distToPlayer < sw.scale * 1.2 && distToPlayer > sw.scale * 0.8 && sw.opacity > 0.4) {
+        this.player.health -= 15 * dt;
+        this.showDamageVignette();
+      }
+
+      if (sw.opacity <= 0) {
+        this.scene.remove(sw.mesh);
+        this.shockwaves.splice(s, 1);
+      }
+    }
+
+    // FAST MELEE ENEMY & BOSS COMBAT AI
     const timeMs = performance.now();
     const baseChaseSpeed = this.difficulty === "elite" ? 10.5 : (this.difficulty === "veteran" ? 8.5 : 6.0);
 
@@ -626,27 +778,43 @@ class FPSGameEngine {
       en.mesh.userData.leftLeg.rotation.x = legAngle;
       en.mesh.userData.rightLeg.rotation.x = -legAngle;
 
-      const attackRange = en.isBoss ? 3.0 : 2.2;
-      if (dist > attackRange) {
+      const attackRange = en.isBoss ? 3.5 : 2.2;
+      if (dist > attackRange && !this.bossIntroActive) {
         const toPlayer = new THREE.Vector3().subVectors(this.player.position, en.mesh.position).normalize();
         toPlayer.y = 0;
-        const currentSpeed = en.isBoss ? 4.5 : baseChaseSpeed;
+        const currentSpeed = en.isBoss ? 5.2 : baseChaseSpeed;
         en.mesh.position.addScaledVector(toPlayer, currentSpeed * dt);
-      } else {
-        if (timeMs - en.lastAttack > (en.isBoss ? 1300 : 950)) {
+      } else if (!this.bossIntroActive) {
+        if (timeMs - en.lastAttack > (en.isBoss ? 1600 : 950)) {
           en.lastAttack = timeMs;
-          if (this.sound) this.sound.playMeleeStrike();
 
-          if (en.mesh.userData.bladeArm) {
-            en.mesh.userData.bladeArm.rotation.x = -0.9;
-            setTimeout(() => {
-              if (en.mesh && en.mesh.userData.bladeArm) en.mesh.userData.bladeArm.rotation.x = 0.35;
-            }, 200);
+          if (en.isBoss) {
+            // BOSS GROUND POUND ATTACK ANIMATION
+            if (this.sound) this.sound.playBossSlam();
+            this.createShockwave(en.mesh.position);
+            this.player.health -= 30;
+            this.showDamageVignette();
+
+            if (en.mesh.userData.bladeArm) {
+              en.mesh.userData.bladeArm.rotation.x = -1.4;
+              setTimeout(() => {
+                if (en.mesh && en.mesh.userData.bladeArm) en.mesh.userData.bladeArm.rotation.x = 0.35;
+              }, 300);
+            }
+          } else {
+            // REGULAR SOLDIER MELEE LUNGE
+            if (this.sound) this.sound.playMeleeStrike();
+            const dmg = this.difficulty === "elite" ? 20 : 14;
+            this.player.health -= dmg;
+            this.showDamageVignette();
+
+            if (en.mesh.userData.bladeArm) {
+              en.mesh.userData.bladeArm.rotation.x = -0.9;
+              setTimeout(() => {
+                if (en.mesh && en.mesh.userData.bladeArm) en.mesh.userData.bladeArm.rotation.x = 0.35;
+              }, 200);
+            }
           }
-
-          const dmg = en.isBoss ? 32 : (this.difficulty === "elite" ? 20 : 14);
-          this.player.health -= dmg;
-          this.showDamageVignette();
 
           if (this.player.health <= 0) {
             this.triggerMissionEnd(false);

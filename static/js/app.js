@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
-  console.log("[ZeroHour] Initializing AI-Powered Gmail Automation Controller...");
+  console.log("[ZeroHour] Initializing Tactical Infiltration Controller...");
 
   const screenMenu = document.getElementById("screen-menu");
   const screenBriefing = document.getElementById("screen-briefing");
@@ -58,7 +58,6 @@ document.addEventListener("DOMContentLoaded", () => {
   let activeCampaign = null;
   let activeMission = null;
 
-  // Initialize 3D Engine
   let game = null;
   try {
     game = new FPSGameEngine("fps-canvas", window.soundEngine);
@@ -67,12 +66,13 @@ document.addEventListener("DOMContentLoaded", () => {
     console.error("[ZeroHour] 3D Engine initialization:", err);
   }
 
-  // 1. DIFFICULTY SELECTION
+  // DIFFICULTY SELECTOR (+10 BOTS)
   function setDifficulty(diff) {
     selectedDifficulty = (diff || "veteran").toLowerCase();
     document.querySelectorAll(".diff-btn").forEach(btn => {
       const match = (btn.getAttribute("data-val") || "").toLowerCase() === selectedDifficulty;
       btn.classList.toggle("selected", match);
+      btn.setAttribute("aria-checked", match ? "true" : "false");
     });
   }
 
@@ -90,7 +90,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 2. REAL GMAIL OAUTH HANDSHAKE
   if (btnConnectGmail) {
     btnConnectGmail.addEventListener("click", async () => {
       try {
@@ -112,7 +111,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (metaSource) metaSource.textContent = "AUTHENTICATED GMAIL";
   }
 
-  // 3. GENERATE ADAPTIVE CAMPAIGN ON INGRESS
+  // GENERATE ADAPTIVE CAMPAIGN ON INGRESS (+10 BOTS: 16, 24, 32)
   async function handleIngress() {
     const callsign = (inputCallsign.value.trim() || "BRAVO-SIX").toUpperCase();
     const email = inputEmail.value.trim() || "commander@zerohour.internal";
@@ -122,12 +121,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (metaCallsign) metaCallsign.textContent = callsign;
 
-    // Show briefing screen immediately
     screenMenu.classList.add("hidden");
     screenBriefing.classList.remove("hidden");
 
     try {
-      // Register session
       const regRes = await fetch("/api/demo/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -135,14 +132,10 @@ document.addEventListener("DOMContentLoaded", () => {
       });
       currentSession = await regRes.json();
 
-      // Ingest & analyze inbox
       await fetch("/api/inbox/analyze?session_id=" + currentSession.session_id, { method: "POST" });
-
-      // Fetch dynamic adaptive campaign
       const campRes = await fetch("/api/campaign/" + currentSession.session_id);
       activeCampaign = await campRes.json();
 
-      // Render Campaign & Active Mission
       if (activeCampaign && activeCampaign.missions.length > 0) {
         activeMission = activeCampaign.missions[0];
         if (campaignTitle) campaignTitle.textContent = activeCampaign.title;
@@ -162,10 +155,31 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     } catch (err) {
       console.warn("[ZeroHour] Fallback to local adaptive missions.", err);
+      const counts = { recruit: 16, veteran: 24, elite: 32 };
+      const num = counts[selectedDifficulty] || 24;
+      currentSession.threats = [];
+      for (let i = 1; i <= num; i++) {
+        currentSession.threats.push({
+          id: "THR-" + String(i).padStart(3, "0"),
+          sender: "Cyber Drone #" + i,
+          sender_email: "drone-" + i + "@threat.internal",
+          subject: "Hostile Clutter Vector #" + i,
+          category: ["phishing", "spam", "promotions", "newsletter"][i % 4],
+          threat_level: (i % 5) + 1
+        });
+      }
     }
   }
 
   if (btnStartDeploy) btnStartDeploy.addEventListener("click", handleIngress);
+
+  const formReg = document.getElementById("form-registration");
+  if (formReg) {
+    formReg.addEventListener("submit", (e) => {
+      e.preventDefault();
+      handleIngress();
+    });
+  }
 
   if (btnBackMenu) {
     btnBackMenu.addEventListener("click", () => {
@@ -174,7 +188,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // 4. DEPLOY INTO 3D INFILTRATION
+  // DEPLOY TO 3D BUNKER
   if (btnDeploy) {
     btnDeploy.addEventListener("click", () => {
       if (window.soundEngine) {
@@ -193,7 +207,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Skip cutscene
   function skipCutscene() {
     if (!game || !game.isCutscene) return;
     game.isCutscene = false;
@@ -225,7 +238,6 @@ document.addEventListener("DOMContentLoaded", () => {
       setTimeout(() => item.remove(), 4000);
     };
 
-    // 5. MISSION END & TACTICAL EXECUTION PANEL
     game.onMissionEnd = async (isVictory, stats) => {
       tacticalHud.classList.add("hidden");
       pointerlockOverlay.classList.add("hidden");
@@ -242,7 +254,6 @@ document.addEventListener("DOMContentLoaded", () => {
       if (resAccuracy) resAccuracy.textContent = stats.accuracy + "%";
       if (resHealth) resHealth.textContent = stats.health + "%";
 
-      // Populate Real Cleanup Proposals
       if (proposalsList && activeMission) {
         proposalsList.innerHTML = "";
         activeMission.target_senders.forEach((s, idx) => {
@@ -251,7 +262,7 @@ document.addEventListener("DOMContentLoaded", () => {
           row.innerHTML = `
             <div>
               <span class="prop-sender">${s.sender_name}</span> (${s.sender_email})
-              <div style="font-size: 10px; color: #94a3b8;">${s.email_count} emails matching cleanup criteria</div>
+              <div style="font-size: 10px; color: #94a3b8;">${s.email_count} matching emails</div>
             </div>
             <div style="display: flex; gap: 8px; align-items: center;">
               <span class="prop-action">[${activeMission.proposed_action}]</span>
@@ -267,7 +278,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
   }
 
-  // 6. CONFIRM & EXECUTE IN GMAIL (EXPLICIT USER APPROVAL)
+  // ONE-CLICK LIVE GMAIL EXECUTION
   if (btnExecuteConfirmed) {
     btnExecuteConfirmed.addEventListener("click", async () => {
       const selectedOps = [];
@@ -309,7 +320,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 
-  // Pointerlock handling
   if (pointerlockOverlay) {
     pointerlockOverlay.addEventListener("click", () => {
       if (window.soundEngine) window.soundEngine.init();
@@ -329,7 +339,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // HUD Update
   setInterval(() => {
     if (!game || !game.isLocked) return;
     if (healthVal) healthVal.textContent = Math.round(game.player.health);
@@ -342,7 +351,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }, 40);
 
-  // Next Mission / Restart
   if (btnRestart) {
     btnRestart.addEventListener("click", () => {
       modalDebrief.classList.add("hidden");

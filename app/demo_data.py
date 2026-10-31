@@ -13,8 +13,9 @@ DEMO_THREATS_POOL: List[dict] = [
 ]
 
 def generate_threat_dataset(difficulty: str) -> List[EmailThreat]:
-    target_counts = {"recruit": 6, "veteran": 14, "elite": 22}
-    total = target_counts.get(difficulty.lower(), 14)
+    # +10 BOTS ADDED TO EACH DIFFICULTY
+    target_counts = {"recruit": 16, "veteran": 24, "elite": 32}
+    total = target_counts.get(difficulty.lower(), 24)
     
     dataset: List[EmailThreat] = []
     idx = 1

@@ -3,6 +3,7 @@ class ProceduralAudio {
     this.ctx = null;
     this.bgmOsc = null;
     this.bgmGain = null;
+    this.bossMusicInterval = null;
     this.noiseBuffer = null;
   }
 
@@ -39,6 +40,43 @@ class ProceduralAudio {
     this.bgmOsc.start();
   }
 
+  // PROCEDURAL INDUSTRIAL 130 BPM BOSS COMBAT SOUNDTRACK
+  startBossBattleMusic() {
+    this.init();
+    if (this.bossMusicInterval) return;
+
+    let step = 0;
+    const notes = [55, 55, 110, 55, 65, 55, 82, 73]; // Heavy drop synth bassline
+
+    this.bossMusicInterval = setInterval(() => {
+      if (!this.ctx) return;
+      const now = this.ctx.currentTime;
+      const osc = this.ctx.createOscillator();
+      const gain = this.ctx.createGain();
+
+      osc.type = "sawtooth";
+      const freq = notes[step % notes.length];
+      osc.frequency.setValueAtTime(freq, now);
+      osc.frequency.exponentialRampToValueAtTime(freq * 0.5, now + 0.18);
+
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.linearRampToValueAtTime(0.01, now + 0.18);
+
+      osc.connect(gain);
+      gain.connect(this.ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.18);
+      step++;
+    }, 230); // ~130 BPM
+  }
+
+  stopBossBattleMusic() {
+    if (this.bossMusicInterval) {
+      clearInterval(this.bossMusicInterval);
+      this.bossMusicInterval = null;
+    }
+  }
+
   playCockWeapon() {
     this.init();
     const now = this.ctx.currentTime;
@@ -55,12 +93,9 @@ class ProceduralAudio {
     osc.stop(now + 0.15);
   }
 
-  // LOUD, PUNCHY FULL-AUTO GUNSHOT (UNMUTED & RELIABLE)
   playGunshot(isADS) {
     this.init();
-    if (this.ctx.state === "suspended") {
-      this.ctx.resume();
-    }
+    if (this.ctx && this.ctx.state === "suspended") this.ctx.resume();
     const now = this.ctx.currentTime;
     
     // Sub-bass heavy thump
@@ -69,7 +104,7 @@ class ProceduralAudio {
     osc.type = "sine";
     osc.frequency.setValueAtTime(isADS ? 160 : 190, now);
     osc.frequency.exponentialRampToValueAtTime(28, now + 0.12);
-    oscGain.gain.setValueAtTime(0.7, now);
+    oscGain.gain.setValueAtTime(0.75, now);
     oscGain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
     osc.connect(oscGain);
     oscGain.connect(this.ctx.destination);
@@ -81,7 +116,7 @@ class ProceduralAudio {
       const noise = this.ctx.createBufferSource();
       noise.buffer = this.noiseBuffer;
       const noiseGain = this.ctx.createGain();
-      noiseGain.gain.setValueAtTime(0.5, now);
+      noiseGain.gain.setValueAtTime(0.55, now);
       noiseGain.gain.linearRampToValueAtTime(0.01, now + 0.08);
       noise.connect(noiseGain);
       noiseGain.connect(this.ctx.destination);
@@ -136,6 +171,38 @@ class ProceduralAudio {
     osc.stop(now + 0.18);
   }
 
+  playBossSlam() {
+    this.init();
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(140, now);
+    osc.frequency.exponentialRampToValueAtTime(20, now + 0.6);
+    gain.gain.setValueAtTime(0.8, now);
+    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.6);
+  }
+
+  playBossAlert() {
+    this.init();
+    const now = this.ctx.currentTime;
+    const osc = this.ctx.createOscillator();
+    const gain = this.ctx.createGain();
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(80, now);
+    osc.frequency.exponentialRampToValueAtTime(240, now + 0.8);
+    gain.gain.setValueAtTime(0.6, now);
+    gain.gain.linearRampToValueAtTime(0.01, now + 0.8);
+    osc.connect(gain);
+    gain.connect(this.ctx.destination);
+    osc.start(now);
+    osc.stop(now + 0.8);
+  }
+
   playHitmarker() {
     this.init();
     const now = this.ctx.currentTime;
@@ -165,22 +232,6 @@ class ProceduralAudio {
     gain.connect(this.ctx.destination);
     osc.start(now);
     osc.stop(now + 0.45);
-  }
-
-  playBossAlert() {
-    this.init();
-    const now = this.ctx.currentTime;
-    const osc = this.ctx.createOscillator();
-    const gain = this.ctx.createGain();
-    osc.type = "sawtooth";
-    osc.frequency.setValueAtTime(90, now);
-    osc.frequency.exponentialRampToValueAtTime(220, now + 0.6);
-    gain.gain.setValueAtTime(0.4, now);
-    gain.gain.linearRampToValueAtTime(0.01, now + 0.6);
-    osc.connect(gain);
-    gain.connect(this.ctx.destination);
-    osc.start(now);
-    osc.stop(now + 0.6);
   }
 }
 
