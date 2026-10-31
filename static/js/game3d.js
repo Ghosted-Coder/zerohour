@@ -1,10 +1,6 @@
 /**
  * ZEROHOUR 3D FIRST-PERSON SHOOTER ENGINE
- * Upgrades:
- *  - Full Difficulty Spawning (Recruit: 6, Veteran: 14, Elite: 22 + Boss)
- *  - Fast Melee Assault Speed (up to 10.5 m/s)
- *  - Fixed POV rotation (YXZ order strictly, zero roll)
- *  - Red Dot Sight & Full-Auto Gunfire
+ * Fixed: Zero JavaScript syntax errors, Strict YXZ Camera, Red Dot ADS, Fast Melee AI
  */
 class FPSGameEngine {
   constructor(canvasId, sound) {
@@ -222,7 +218,7 @@ class FPSGameEngine {
 
   setupControls() {
     window.addEventListener("keydown", (e) => {
-      this.sound.init();
+      if (this.sound) this.sound.init();
       if (this.isCutscene) return;
       const k = e.key.toLowerCase();
       if (k === "w") this.keys.w = true;
@@ -262,7 +258,7 @@ class FPSGameEngine {
     });
 
     window.addEventListener("mousedown", (e) => {
-      this.sound.init();
+      if (this.sound) this.sound.init();
       if (!this.isLocked || this.isCutscene) return;
       if (e.button === 0) {
         this.mouse.left = true;
@@ -287,7 +283,7 @@ class FPSGameEngine {
     this.camera.lookAt(0, 1.8, -10);
 
     setTimeout(() => {
-      this.sound.playCockWeapon();
+      if (this.sound) this.sound.playCockWeapon();
       this.cockAnimOffset = 0.15;
     }, 2400);
   }
@@ -298,7 +294,7 @@ class FPSGameEngine {
 
     this.player.isSliding = true;
     this.player.slideTimer = 0.65;
-    this.sound.playSlide();
+    if (this.sound) this.sound.playSlide();
 
     const moveDir = new THREE.Vector3();
     if (this.keys.w) moveDir.z -= 1;
@@ -311,10 +307,10 @@ class FPSGameEngine {
     this.player.slideDir.copy(moveDir);
   }
 
-  // ROBUST SPAWNING: RECRUIT (6), VETERAN (14), ELITE (22 + BOSS)
+  // ROBUST ENEMY SPAWNING (SAFELY PADDED, NO SYNTAX ERRORS)
   loadSession(threats, diff = "veteran") {
     this.threats = threats || [];
-    this.difficulty = diff.toLowerCase();
+    this.difficulty = (diff || "veteran").toLowerCase();
     this.enemies.forEach(en => this.scene.remove(en.mesh));
     this.enemies = [];
     if (this.boss) {
@@ -323,16 +319,15 @@ class FPSGameEngine {
     }
     this.bossSpawned = false;
 
-    // Guaranteed fallback if threats array is empty
     if (this.threats.length === 0) {
       const counts = { recruit: 6, veteran: 14, elite: 22 };
       const num = counts[this.difficulty] || 14;
       for (let k = 1; k <= num; k++) {
         this.threats.push({
-          id: `THR-GEN-${k:03d}`,
-          sender: `Cluster Node #${k}`,
-          sender_email: `node-${k}@threat.internal`,
-          subject: `Automated Intrusion Threat #${k}`,
+          id: "THR-GEN-" + String(k).padStart(3, "0"),
+          sender: "Cluster Node #" + k,
+          sender_email: "node-" + k + "@threat.internal",
+          subject: "Automated Intrusion Threat #" + k,
           category: ["phishing", "spam", "promotions", "newsletter"][k % 4],
           threat_level: (k % 5) + 1
         });
@@ -361,7 +356,7 @@ class FPSGameEngine {
       });
     });
 
-    console.log(`[ZeroHour 3D] Spawned ${this.enemies.length} enemies in ${this.difficulty.toUpperCase()} mode.`);
+    console.log("[ZeroHour 3D] Spawned " + this.enemies.length + " enemies in " + this.difficulty.toUpperCase() + " mode.");
   }
 
   createSoldierMesh(cat, isBoss = false) {
@@ -416,7 +411,7 @@ class FPSGameEngine {
   spawnBoss() {
     if (this.bossSpawned) return;
     this.bossSpawned = true;
-    this.sound.playBossAlert();
+    if (this.sound) this.sound.playBossAlert();
 
     const bossMesh = this.createSoldierMesh("phishing", true);
     bossMesh.position.set(0, 0, -25);
@@ -447,7 +442,7 @@ class FPSGameEngine {
 
     this.player.ammoClip -= 1;
     this.player.shotsFired += 1;
-    this.sound.playGunshot(this.player.isADS);
+    if (this.sound) this.sound.playGunshot(this.player.isADS);
 
     this.recoilOffset = 0.055;
     this.pitch += 0.011;
@@ -471,12 +466,12 @@ class FPSGameEngine {
 
       if (targetEnemy) {
         targetEnemy.health -= 35;
-        this.sound.playHitmarker();
+        if (this.sound) this.sound.playHitmarker();
         this.showHitmarker(false);
 
         if (targetEnemy.isBoss) {
           const fill = document.getElementById("boss-bar-fill");
-          if (fill) fill.style.width = `${Math.max(0, (targetEnemy.health / targetEnemy.maxHealth) * 100)}%`;
+          if (fill) fill.style.width = Math.max(0, (targetEnemy.health / targetEnemy.maxHealth) * 100) + "%";
         }
 
         if (targetEnemy.health <= 0) {
@@ -520,7 +515,7 @@ class FPSGameEngine {
   reload() {
     if (this.player.isReloading || this.player.ammoClip === 30 || this.player.ammoReserve <= 0) return;
     this.player.isReloading = true;
-    this.sound.playReload();
+    if (this.sound) this.sound.playReload();
 
     setTimeout(() => {
       const needed = 30 - this.player.ammoClip;
@@ -618,10 +613,8 @@ class FPSGameEngine {
     const targetRoll = this.player.isSliding ? 0.35 : 0;
     this.weaponRig.rotation.z += (targetRoll - this.weaponRig.rotation.z) * 10 * dt;
 
-    // AGGRESSIVE FAST MELEE ENEMY ASSAULT
+    // FAST MELEE ENEMY PURSUIT
     const timeMs = performance.now();
-    
-    // DIFFICULTY SPEEDS: Recruit 6.0m/s, Veteran 8.5m/s, Elite 10.5m/s
     const baseChaseSpeed = this.difficulty === "elite" ? 10.5 : (this.difficulty === "veteran" ? 8.5 : 6.0);
 
     this.enemies.forEach(en => {
@@ -642,7 +635,7 @@ class FPSGameEngine {
       } else {
         if (timeMs - en.lastAttack > (en.isBoss ? 1300 : 950)) {
           en.lastAttack = timeMs;
-          this.sound.playMeleeStrike();
+          if (this.sound) this.sound.playMeleeStrike();
 
           if (en.mesh.userData.bladeArm) {
             en.mesh.userData.bladeArm.rotation.x = -0.9;

@@ -11,7 +11,7 @@
 </head>
 <body class="tactical-body">
 
-  <!-- SCREEN 1: REGISTRATION TERMINAL (OBSIDIAN & CHROME) -->
+  <!-- SCREEN 1: REGISTRATION / INGRESS (OBSIDIAN & CHROME) -->
   <section id="screen-menu" class="overlay-screen active">
     <div class="terminal-frame">
       <div class="terminal-badge">
@@ -21,12 +21,12 @@
       <h1 class="chrome-title">ZEROHOUR</h1>
       <p class="chrome-subtitle">OPERATION DIGITAL RECKONING // HIGH-THREAT INGRESS</p>
       
-      <form id="form-registration" class="terminal-form" novalidate>
+      <form id="form-registration" class="terminal-form" onsubmit="return false;">
         <div class="form-row">
           <label for="input-callsign">OPERATOR CALLSIGN</label>
           <div class="input-box">
             <span class="input-sym">&gt;</span>
-            <input type="text" id="input-callsign" placeholder="e.g. BRAVO-SIX" value="BRAVO-SIX" required autocomplete="off">
+            <input type="text" id="input-callsign" placeholder="e.g. BRAVO-SIX" value="BRAVO-SIX" autocomplete="off">
             <button type="button" id="btn-rnd-callsign" class="btn-chrome-sm">RND</button>
           </div>
           <span class="error-msg" id="err-callsign"></span>
@@ -36,12 +36,12 @@
           <label for="input-email">SECURE COMM FREQ (EMAIL)</label>
           <div class="input-box">
             <span class="input-sym">@</span>
-            <input type="email" id="input-email" placeholder="commander@zerohour.internal" value="commander@zerohour.internal" required autocomplete="off">
+            <input type="email" id="input-email" placeholder="commander@zerohour.internal" value="commander@zerohour.internal" autocomplete="off">
           </div>
           <span class="error-msg" id="err-email"></span>
         </div>
 
-        <!-- RELIABLE ACCESSIBLE DIFFICULTY BUTTONS -->
+        <!-- DIFFICULTY SELECTOR -->
         <div class="form-row">
           <label id="lbl-diff">OPERATION INTENSITY</label>
           <div class="diff-grid" id="diff-selector" role="radiogroup" aria-labelledby="lbl-diff">
@@ -60,7 +60,7 @@
           </div>
         </div>
 
-        <button type="submit" id="btn-start-deploy" class="btn-chrome-primary">
+        <button type="button" id="btn-start-deploy" class="btn-chrome-primary">
           <span>INITIALIZE DEPLOYMENT &gt;&gt;</span>
         </button>
 

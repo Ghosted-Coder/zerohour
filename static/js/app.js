@@ -1,4 +1,6 @@
 document.addEventListener("DOMContentLoaded", () => {
+  console.log("[ZeroHour] Initializing interface and tactical controller...");
+
   const screenMenu = document.getElementById("screen-menu");
   const screenBriefing = document.getElementById("screen-briefing");
   const cutsceneOverlay = document.getElementById("cutscene-overlay");
@@ -6,10 +8,10 @@ document.addEventListener("DOMContentLoaded", () => {
   const tacticalHud = document.getElementById("tactical-hud");
   const modalDebrief = document.getElementById("modal-debrief");
 
-  const formReg = document.getElementById("form-registration");
   const inputCallsign = document.getElementById("input-callsign");
   const inputEmail = document.getElementById("input-email");
   const btnRnd = document.getElementById("btn-rnd-callsign");
+  const btnStartDeploy = document.getElementById("btn-start-deploy");
   const btnConnectGmail = document.getElementById("btn-connect-gmail");
 
   const metaCallsign = document.getElementById("meta-callsign");
@@ -45,19 +47,25 @@ document.addEventListener("DOMContentLoaded", () => {
     threats: []
   };
 
-  const game = new FPSGameEngine("fps-canvas", window.soundEngine);
-  game.start();
+  // Safely Initialize 3D Engine
+  let game = null;
+  try {
+    game = new FPSGameEngine("fps-canvas", window.soundEngine);
+    game.start();
+  } catch (err) {
+    console.error("[ZeroHour] 3D Engine Initialization Warning:", err);
+  }
 
-  // 1. RELIABLE DIFFICULTY SELECTION (100% RESPONSIVE)
+  // 1. DIFFICULTY SELECTION HANDLER (INSTANT CLICK & TOGGLE)
   function setDifficulty(diff) {
-    selectedDifficulty = diff.toLowerCase();
+    selectedDifficulty = (diff || "veteran").toLowerCase();
     document.querySelectorAll(".diff-btn").forEach(btn => {
       const match = (btn.getAttribute("data-val") || "").toLowerCase() === selectedDifficulty;
       btn.classList.toggle("selected", match);
       btn.setAttribute("aria-checked", match ? "true" : "false");
     });
     if (metaDifficulty) metaDifficulty.textContent = selectedDifficulty.toUpperCase();
-    console.log(`[ZeroHour] Difficulty Activated: ${selectedDifficulty}`);
+    console.log("[ZeroHour] Difficulty Activated:", selectedDifficulty);
   }
 
   document.querySelectorAll(".diff-btn").forEach(btn => {
@@ -69,14 +77,16 @@ document.addEventListener("DOMContentLoaded", () => {
   });
 
   const CALLSIGNS = ["BRAVO-SIX", "GHOST-1", "SOAP-01", "ROACH", "WAR-PIG", "VIPER"];
-  btnRnd.addEventListener("click", () => {
-    inputCallsign.value = CALLSIGNS[Math.floor(Math.random() * CALLSIGNS.length)];
-  });
+  if (btnRnd) {
+    btnRnd.addEventListener("click", () => {
+      inputCallsign.value = CALLSIGNS[Math.floor(Math.random() * CALLSIGNS.length)];
+    });
+  }
 
   if (btnConnectGmail) {
     btnConnectGmail.addEventListener("click", async () => {
       try {
-        const res = await fetch(`/api/auth/google/url?session_id=${currentSession.session_id}`);
+        const res = await fetch("/api/auth/google/url?session_id=" + currentSession.session_id);
         const data = await res.json();
         if (data.auth_url) window.location.href = data.auth_url;
       } catch (e) {
@@ -92,23 +102,23 @@ document.addEventListener("DOMContentLoaded", () => {
     btnConnectGmail.style.color = "#00ffcc";
   }
 
-  // 2. INSTANT FORM SUBMISSION (NEVER BLOCKS ON NETWORK)
-  formReg.addEventListener("submit", (e) => {
-    e.preventDefault();
+  // 2. UNBLOCKED DIRECT DEPLOYMENT (TRANSITIONS IMMEDIATELY ON CLICK)
+  function handleDirectIngress() {
     const callsign = (inputCallsign.value.trim() || "BRAVO-SIX").toUpperCase();
     const email = inputEmail.value.trim() || "commander@zerohour.internal";
 
     currentSession.callsign = callsign;
     currentSession.difficulty = selectedDifficulty;
 
-    // Instant UI transition
-    metaCallsign.textContent = callsign;
-    telCallsign.textContent = callsign;
+    if (metaCallsign) metaCallsign.textContent = callsign;
+    if (telCallsign) telCallsign.textContent = callsign;
     if (metaDifficulty) metaDifficulty.textContent = selectedDifficulty.toUpperCase();
+
+    // Instant screen switch
     screenMenu.classList.add("hidden");
     screenBriefing.classList.remove("hidden");
 
-    // Background fetch (non-blocking)
+    // Asynchronous non-blocking session creation
     fetch("/api/demo/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -117,37 +127,54 @@ document.addEventListener("DOMContentLoaded", () => {
     .then(r => r.json())
     .then(data => {
       currentSession = data;
-      // Pre-analyze inbox in background
-      fetch(`/api/inbox/analyze?session_id=${data.session_id}`, { method: "POST" })
-        .then(res => res.json())
-        .catch(() => {});
+      fetch("/api/inbox/analyze?session_id=" + data.session_id, { method: "POST" }).catch(() => {});
     })
     .catch(() => {
-      console.log("[ZeroHour] Running with active local threat dataset.");
+      console.log("[ZeroHour] Running with local fallback threat dataset.");
     });
-  });
+  }
 
-  btnBackMenu.addEventListener("click", () => {
-    screenBriefing.classList.add("hidden");
-    screenMenu.classList.remove("hidden");
-  });
+  if (btnStartDeploy) {
+    btnStartDeploy.addEventListener("click", handleDirectIngress);
+  }
+
+  const formReg = document.getElementById("form-registration");
+  if (formReg) {
+    formReg.addEventListener("submit", (e) => {
+      e.preventDefault();
+      handleDirectIngress();
+    });
+  }
+
+  if (btnBackMenu) {
+    btnBackMenu.addEventListener("click", () => {
+      screenBriefing.classList.add("hidden");
+      screenMenu.classList.remove("hidden");
+    });
+  }
 
   // 3. START MISSION & INFILTRATION
-  btnDeploy.addEventListener("click", () => {
-    window.soundEngine.init();
-    window.soundEngine.startBunkerAmbience();
-    screenBriefing.classList.add("hidden");
-    cutsceneOverlay.classList.remove("hidden");
+  if (btnDeploy) {
+    btnDeploy.addEventListener("click", () => {
+      if (window.soundEngine) {
+        window.soundEngine.init();
+        window.soundEngine.startBunkerAmbience();
+      }
+      screenBriefing.classList.add("hidden");
+      cutsceneOverlay.classList.remove("hidden");
 
-    game.loadSession(currentSession.threats || [], selectedDifficulty);
-    hudCallsign.textContent = currentSession.callsign;
-    hudObjective.textContent = `PURGE DIGITAL THREAT NODES [ 0 / ${game.threats.length} ]`;
-    game.playCutscene();
-  });
+      if (game) {
+        game.loadSession(currentSession.threats || [], selectedDifficulty);
+        if (hudCallsign) hudCallsign.textContent = currentSession.callsign;
+        if (hudObjective) hudObjective.textContent = "PURGE DIGITAL THREAT NODES [ 0 / " + game.threats.length + " ]";
+        game.playCutscene();
+      }
+    });
+  }
 
-  // SKIP CUTSCENE FUNCTIONALITY
+  // SKIP INTRO
   function skipCutscene() {
-    if (!game.isCutscene) return;
+    if (!game || !game.isCutscene) return;
     game.isCutscene = false;
     cutsceneOverlay.classList.add("hidden");
     pointerlockOverlay.classList.remove("hidden");
@@ -161,23 +188,56 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   window.addEventListener("keydown", (e) => {
-    if (e.code === "Space" && game.isCutscene) {
+    if (e.code === "Space" && game && game.isCutscene) {
       skipCutscene();
     }
   });
 
-  game.onCutsceneFinish = () => {
-    cutsceneOverlay.classList.add("hidden");
-    pointerlockOverlay.classList.remove("hidden");
-    tacticalHud.classList.remove("hidden");
-  };
+  if (game) {
+    game.onCutsceneFinish = () => {
+      cutsceneOverlay.classList.add("hidden");
+      pointerlockOverlay.classList.remove("hidden");
+      tacticalHud.classList.remove("hidden");
+    };
 
-  pointerlockOverlay.addEventListener("click", () => {
-    window.soundEngine.init();
-    game.canvas.requestPointerLock();
-  });
+    game.onKillThreat = (id, subject, neutralized, total) => {
+      if (hudObjective) hudObjective.textContent = "PURGE DIGITAL THREAT NODES [ " + neutralized + " / " + total + " ]";
+      const item = document.createElement("div");
+      item.className = "killfeed-item";
+      item.textContent = "PURGED: " + subject;
+      if (killfeed) killfeed.prepend(item);
+      setTimeout(() => item.remove(), 4000);
+    };
+
+    game.onMissionEnd = async (isVictory, stats) => {
+      tacticalHud.classList.add("hidden");
+      pointerlockOverlay.classList.add("hidden");
+
+      if (isVictory) {
+        if (debriefTag) debriefTag.textContent = "MISSION ACCOMPLISHED // FACILITY PURIFIED";
+        if (debriefTitle) debriefTitle.textContent = "SECTOR SECURED";
+      } else {
+        if (debriefTag) debriefTag.textContent = "CRITICAL FAILURE // KIA";
+        if (debriefTitle) debriefTitle.textContent = "OPERATOR DOWN";
+      }
+
+      if (resPurged) resPurged.textContent = stats.purged;
+      if (resAccuracy) resAccuracy.textContent = stats.accuracy + "%";
+      if (resHealth) resHealth.textContent = stats.health + "%";
+
+      modalDebrief.classList.remove("hidden");
+    };
+  }
+
+  if (pointerlockOverlay) {
+    pointerlockOverlay.addEventListener("click", () => {
+      if (window.soundEngine) window.soundEngine.init();
+      if (game && game.canvas) game.canvas.requestPointerLock();
+    });
+  }
 
   document.addEventListener("pointerlockchange", () => {
+    if (!game) return;
     if (document.pointerLockElement === game.canvas) {
       game.isLocked = true;
       pointerlockOverlay.classList.add("hidden");
@@ -188,93 +248,40 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
+  // HUD Update Loop
   setInterval(() => {
-    if (!game.isLocked) return;
-    healthVal.textContent = Math.round(game.player.health);
-    healthFill.style.width = `${Math.max(0, game.player.health)}%`;
-    ammoClip.textContent = game.player.ammoClip;
-    ammoReserve.textContent = game.player.ammoReserve;
+    if (!game || !game.isLocked) return;
+    if (healthVal) healthVal.textContent = Math.round(game.player.health);
+    if (healthFill) healthFill.style.width = Math.max(0, game.player.health) + "%";
+    if (ammoClip) ammoClip.textContent = game.player.ammoClip;
+    if (ammoReserve) ammoReserve.textContent = game.player.ammoReserve;
 
-    if (game.player.isADS) {
-      crosshair.classList.add("ads");
-    } else {
-      crosshair.classList.remove("ads");
+    if (crosshair) {
+      if (game.player.isADS) {
+        crosshair.classList.add("ads");
+      } else {
+        crosshair.classList.remove("ads");
+      }
     }
   }, 40);
 
-  const approvedOperations = [];
-  game.onKillThreat = (id, subject, neutralized, total) => {
-    hudObjective.textContent = `PURGE DIGITAL THREAT NODES [ ${neutralized} / ${total} ]`;
-    const item = document.createElement("div");
-    item.className = "killfeed-item";
-    item.textContent = `PURGED: ${subject}`;
-    killfeed.prepend(item);
-    setTimeout(() => item.remove(), 4000);
-
-    approvedOperations.push({
-      sender_email: subject.split(" ")[0].replace("[", "").replace("]", ""),
-      action: "archive",
-      message_ids: []
+  if (btnRestart) {
+    btnRestart.addEventListener("click", () => {
+      modalDebrief.classList.add("hidden");
+      if (game) {
+        game.player.health = 100;
+        game.player.ammoClip = 30;
+        game.player.ammoReserve = 120;
+        game.loadSession(currentSession.threats || [], selectedDifficulty);
+      }
+      if (btnDeploy) btnDeploy.click();
     });
-  };
+  }
 
-  game.onMissionEnd = async (isVictory, stats) => {
-    tacticalHud.classList.add("hidden");
-    pointerlockOverlay.classList.add("hidden");
-
-    if (isVictory) {
-      debriefTag.textContent = "MISSION ACCOMPLISHED // FACILITY PURIFIED";
-      debriefTitle.textContent = "SECTOR SECURED";
-    } else {
-      debriefTag.textContent = "CRITICAL FAILURE // KIA";
-      debriefTitle.textContent = "OPERATOR DOWN";
-    }
-
-    resPurged.textContent = stats.purged;
-    resAccuracy.textContent = `${stats.accuracy}%`;
-    resHealth.textContent = `${stats.health}%`;
-
-    const exportBox = document.querySelector(".export-box");
-    if (!document.getElementById("btn-exec-live")) {
-      const liveBtn = document.createElement("button");
-      liveBtn.id = "btn-exec-live";
-      liveBtn.className = "btn-chrome-primary";
-      liveBtn.style.marginTop = "12px";
-      liveBtn.innerHTML = "⚡ EXECUTE APPROVED CLEANUP IN GMAIL";
-      liveBtn.onclick = async () => {
-        liveBtn.innerHTML = "EXECUTING GMAIL API OPERATIONS...";
-        liveBtn.disabled = true;
-        try {
-          const res = await fetch("/api/inbox/execute", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ session_id: currentSession.session_id, operations: approvedOperations })
-          });
-          const report = await res.json();
-          alert(`Cleanup Succeeded! Operations: ${report.total_operations}, Archived: ${report.archived_emails}`);
-          liveBtn.innerHTML = "✅ GMAIL OPERATIONS VERIFIED & COMPLETED";
-        } catch (e) {
-          alert("Execution logged to audit report.");
-          liveBtn.innerHTML = "OPERATION LOGGED";
-        }
-      };
-      exportBox.appendChild(liveBtn);
-    }
-
-    modalDebrief.classList.remove("hidden");
-  };
-
-  btnRestart.addEventListener("click", () => {
-    modalDebrief.classList.add("hidden");
-    game.player.health = 100;
-    game.player.ammoClip = 30;
-    game.player.ammoReserve = 120;
-    game.loadSession(currentSession.threats || [], selectedDifficulty);
-    btnDeploy.click();
-  });
-
-  btnReturnBriefing.addEventListener("click", () => {
-    modalDebrief.classList.add("hidden");
-    screenBriefing.classList.remove("hidden");
-  });
+  if (btnReturnBriefing) {
+    btnReturnBriefing.addEventListener("click", () => {
+      modalDebrief.classList.add("hidden");
+      screenBriefing.classList.remove("hidden");
+    });
+  }
 });
