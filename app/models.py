@@ -13,7 +13,7 @@ class EmailThreat(BaseModel):
     subject: str
     category: Literal["phishing", "spam", "newsletter", "social", "promotions", "finance", "work", "personal"]
     threat_level: int = Field(default=3, ge=1, le=5)
-    action: Optional[Literal["purge", "archive", "quarantine", "filter"]] = None
+    action: Optional[Literal["purge", "archive", "quarantine", "filter", "protect"]] = None
     applied_in_session: bool = False
     opt_out_link: Optional[str] = None
     message_count: int = 1
@@ -49,6 +49,28 @@ class InboxAnalysisSummary(BaseModel):
     total_clusters: int
     top_senders: List[SenderCluster]
     clutter_ratio: float
+
+# ZEROHOUR ADAPTIVE CAMPAIGN ENGINE MODELS
+class AdaptiveMission(BaseModel):
+    mission_id: str
+    title: str
+    mission_type: Literal["eliminate_clutter", "stop_reinforcements", "secure_archives", "protect_intelligence", "perimeter_control"]
+    objective_text: str
+    target_senders: List[SenderCluster]
+    affected_emails: int
+    proposed_action: Literal["archive", "filter", "unsubscribe", "label", "protect"]
+    risk_level: Literal["LOW", "MEDIUM", "HIGH"]
+    is_completed: bool = False
+    is_approved: bool = False
+
+class AdaptiveCampaign(BaseModel):
+    campaign_id: str
+    title: str
+    description: str
+    inbox_clutter_score: float
+    total_clutter_emails: int
+    missions: List[AdaptiveMission]
+    is_real_gmail: bool = False
 
 class CleanupOperationRequest(BaseModel):
     session_id: str

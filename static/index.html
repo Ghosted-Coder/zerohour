@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ZEROHOUR // 3D First-Person Infiltration</title>
+  <title>ZEROHOUR // AI-Powered Gmail Automation Game</title>
   <link rel="stylesheet" href="/static/css/style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
@@ -11,15 +11,15 @@
 </head>
 <body class="tactical-body">
 
-  <!-- SCREEN 1: REGISTRATION / INGRESS (OBSIDIAN & CHROME) -->
+  <!-- SCREEN 1: REGISTRATION & GMAIL OAUTH (OBSIDIAN & CHROME) -->
   <section id="screen-menu" class="overlay-screen active">
     <div class="terminal-frame">
       <div class="terminal-badge">
         <span class="chrome-dot"></span>
-        <span>TF-141 // CYBER DIVISION RECONNAISSANCE</span>
+        <span id="badge-auth-status">SANDBOX CLEARANCE // GMAIL READY</span>
       </div>
       <h1 class="chrome-title">ZEROHOUR</h1>
-      <p class="chrome-subtitle">OPERATION DIGITAL RECKONING // HIGH-THREAT INGRESS</p>
+      <p class="chrome-subtitle">AI-POWERED GMAIL AUTOMATION // TACTICAL CONTROL PLANE</p>
       
       <form id="form-registration" class="terminal-form" onsubmit="return false;">
         <div class="form-row">
@@ -29,31 +29,28 @@
             <input type="text" id="input-callsign" placeholder="e.g. BRAVO-SIX" value="BRAVO-SIX" autocomplete="off">
             <button type="button" id="btn-rnd-callsign" class="btn-chrome-sm">RND</button>
           </div>
-          <span class="error-msg" id="err-callsign"></span>
         </div>
 
         <div class="form-row">
-          <label for="input-email">SECURE COMM FREQ (EMAIL)</label>
+          <label for="input-email">COMM FREQ / GMAIL ID</label>
           <div class="input-box">
             <span class="input-sym">@</span>
             <input type="email" id="input-email" placeholder="commander@zerohour.internal" value="commander@zerohour.internal" autocomplete="off">
           </div>
-          <span class="error-msg" id="err-email"></span>
         </div>
 
-        <!-- DIFFICULTY SELECTOR -->
         <div class="form-row">
-          <label id="lbl-diff">OPERATION INTENSITY</label>
-          <div class="diff-grid" id="diff-selector" role="radiogroup" aria-labelledby="lbl-diff">
-            <button type="button" class="diff-btn" data-val="recruit" aria-checked="false">
+          <label>OPERATION INTENSITY</label>
+          <div class="diff-grid" id="diff-selector" role="radiogroup">
+            <button type="button" class="diff-btn" data-val="recruit">
               <span class="diff-title">RECRUIT</span>
               <span class="diff-sub">6 THREATS</span>
             </button>
-            <button type="button" class="diff-btn selected" data-val="veteran" aria-checked="true">
+            <button type="button" class="diff-btn selected" data-val="veteran">
               <span class="diff-title">VETERAN</span>
               <span class="diff-sub">14 THREATS</span>
             </button>
-            <button type="button" class="diff-btn" data-val="elite" aria-checked="false">
+            <button type="button" class="diff-btn" data-val="elite">
               <span class="diff-title">ELITE</span>
               <span class="diff-sub">22 + BOSS</span>
             </button>
@@ -61,7 +58,7 @@
         </div>
 
         <button type="button" id="btn-start-deploy" class="btn-chrome-primary">
-          <span>INITIALIZE DEPLOYMENT &gt;&gt;</span>
+          <span>GENERATE ADAPTIVE CAMPAIGN &gt;&gt;</span>
         </button>
 
         <button type="button" id="btn-connect-gmail" class="btn-chrome-ghost" style="width: 100%; margin-top: 10px;">
@@ -71,29 +68,32 @@
     </div>
   </section>
 
-  <!-- SCREEN 2: BRIEFING -->
+  <!-- SCREEN 2: ADAPTIVE CAMPAIGN BRIEFING -->
   <section id="screen-briefing" class="overlay-screen hidden">
     <div class="terminal-frame briefing-frame">
       <div class="briefing-top">
-        <span class="chrome-tag">TOP SECRET // CLASSIFIED INTEL</span>
-        <h2>OPERATION DIGITAL RECKONING</h2>
+        <span class="chrome-tag" id="campaign-badge">AI CAMPAIGN // TAILORED TELEMETRY</span>
+        <h2 id="campaign-title">OPERATION DIGITAL RECKONING</h2>
         <div class="briefing-meta">
           <span>OPERATOR: <strong id="meta-callsign" class="chrome-text">BRAVO-SIX</strong></span>
-          <span>INTENSITY: <strong id="meta-difficulty" class="chrome-text">VETERAN</strong></span>
-          <span>WEAPONS: <strong class="chrome-text">M4 CARBINE [FULL-AUTO]</strong></span>
+          <span>MODE: <strong id="meta-source" class="chrome-text">DEMO SANDBOX</strong></span>
+          <span>INBOX CLUTTER SCORE: <strong id="meta-clutter" class="chrome-text color-red">78.5%</strong></span>
         </div>
       </div>
 
       <div class="briefing-body">
         <div class="briefing-intel">
-          <h3>SITUATION REPORT</h3>
-          <p>Hostile mercenary drones have taken root in the data bunker. Intel reports enemies are charging for close-quarters melee combat. High-threat Juggernaut detected in the sub-vault.</p>
+          <h3 id="mission-heading">PRIMARY MISSION: PURGE COMMERCIAL SATURATION</h3>
+          <p id="mission-desc">AI intelligence scanned active inbox sectors. Hostile marketing clusters have generated excessive clutter. Deploy into the bunker to neutralize these targets.</p>
           <div class="intel-bullet">
-            <strong>HONEST REMEDIATION:</strong> Purged threat nodes produce authentic <code>filters.xml</code> and <code>unsubscribe.csv</code> files upon extraction.
+            <strong>TARGETED SENDER CLUSTERS:</strong>
+            <ul id="mission-target-list" class="target-list">
+              <li>Scanning inbox telemetry...</li>
+            </ul>
           </div>
         </div>
         <div class="briefing-controls">
-          <h3>CONTROLS</h3>
+          <h3>TACTICAL CONTROLS</h3>
           <div class="ctrl-grid">
             <div><kbd>W A S D</kbd> <span>TACTICAL MOVEMENT</span></div>
             <div><kbd>MOUSE</kbd> <span>PRECISION AIM (YXZ)</span></div>
@@ -113,11 +113,10 @@
     </div>
   </section>
 
-  <!-- 3D FPS CANVAS & CINEMATIC CUTSCENE -->
+  <!-- SCREEN 3: 3D FIRST-PERSON GAMEPLAY -->
   <div id="game-container">
     <canvas id="fps-canvas"></canvas>
 
-    <!-- CUTSCENE LETTERBOX & TELEMETRY WITH SKIP BUTTON -->
     <div id="cutscene-overlay" class="cutscene-overlay hidden">
       <div class="cinema-bar cinema-bar-top"></div>
       <div class="cinema-bar cinema-bar-bottom"></div>
@@ -131,7 +130,6 @@
       <button type="button" id="btn-skip-cutscene" class="btn-skip-intro">SKIP INTRO [SPACE] &gt;&gt;</button>
     </div>
 
-    <!-- POINTER LOCK PROMPT -->
     <div id="pointerlock-overlay" class="pointerlock-overlay hidden">
       <div class="pointerlock-box">
         <div class="lock-icon">🎯</div>
@@ -141,7 +139,7 @@
       </div>
     </div>
 
-    <!-- COD MW MINIMAL TACTICAL HUD -->
+    <!-- TACTICAL HUD -->
     <div id="tactical-hud" class="tactical-hud hidden">
       <div id="crosshair" class="crosshair">
         <div class="ch-line ch-top"></div>
@@ -153,13 +151,11 @@
       <div id="hitmarker" class="hitmarker hidden"></div>
       <div id="damage-vignette" class="damage-vignette"></div>
 
-      <!-- Top Objective Bar -->
       <header class="hud-objective-bar">
-        <div class="obj-badge">PRIMARY OBJECTIVE</div>
+        <div class="obj-badge" id="hud-mission-badge">ACTIVE MISSION</div>
         <div class="obj-text" id="hud-objective-text">PURGE DIGITAL THREAT NODES [ 0 / 14 ]</div>
       </header>
 
-      <!-- BOSS HEALTH BAR -->
       <div id="boss-hud-bar" class="boss-hud-bar hidden">
         <div class="boss-title-wrap">
           <span class="boss-warn">⚠️ HOSTILE PROTOCOL NEXUS ⚠️</span>
@@ -170,7 +166,6 @@
         </div>
       </div>
 
-      <!-- Bottom Left: Health -->
       <div class="hud-bottom-left">
         <div class="operator-tag" id="hud-callsign">BRAVO-SIX</div>
         <div class="health-wrap">
@@ -180,7 +175,6 @@
         </div>
       </div>
 
-      <!-- Bottom Right: Full-Auto Ammo -->
       <div class="hud-bottom-right">
         <div class="weapon-name">M4A1 CARBINE // 5.56 NATO [RED-DOT]</div>
         <div class="ammo-display">
@@ -195,22 +189,30 @@
     </div>
   </div>
 
-  <!-- DEBRIEF MODAL -->
+  <!-- SCREEN 4: TACTICAL EXECUTION PANEL (REAL GMAIL AUTOMATION APPROVAL) -->
   <div id="modal-debrief" class="modal-backdrop hidden">
     <div class="terminal-frame modal-frame">
-      <div class="modal-tag" id="debrief-tag">OPERATION COMPLETED</div>
-      <h2 id="debrief-title" class="chrome-title">SECTOR PURIFIED</h2>
-      <p id="debrief-desc">Underground facility secured. Threat nodes eradicated.</p>
+      <div class="modal-tag" id="debrief-tag">MISSION ACCOMPLISHED // CLEANUP PROPOSAL UNLOCKED</div>
+      <h2 id="debrief-title" class="chrome-title">TACTICAL EXECUTION PANEL</h2>
+      <p id="debrief-desc">Combat mission complete. Review and approve live Gmail operations below:</p>
 
-      <div class="stats-row">
-        <div class="stat-col"><span id="res-purged">0</span><small>THREATS PURGED</small></div>
-        <div class="stat-col"><span id="res-accuracy">0%</span><small>ACCURACY</small></div>
-        <div class="stat-col"><span id="res-health">100%</span><small>HEALTH</small></div>
+      <!-- PROPOSED ACTIONS TABLE -->
+      <div class="proposals-container">
+        <h3>PROPOSED ACTIONS (EXPLICIT USER CONFIRMATION REQUIRED)</h3>
+        <div id="proposals-list" class="proposals-list">
+          <!-- Populated dynamically with real sender clusters & actions -->
+        </div>
+      </div>
+
+      <div class="execution-actions">
+        <button type="button" id="btn-execute-confirmed" class="btn-chrome-primary">
+          <span>⚡ CONFIRM &amp; EXECUTE IN GMAIL</span>
+        </button>
+        <div id="execution-status-msg" class="exec-msg hidden"></div>
       </div>
 
       <div class="export-box">
-        <h3>HONEST EXECUTION REMEDIATION ARTIFACTS</h3>
-        <p>Your combat actions compiled real email remediation rules:</p>
+        <h3>REMEDIATION ARTIFACTS</h3>
         <div class="export-btns">
           <button type="button" id="btn-export-xml" class="btn-chrome-download">DOWNLOAD filters.xml</button>
           <button type="button" id="btn-export-csv" class="btn-chrome-download">DOWNLOAD unsubscribe.csv</button>
@@ -218,8 +220,8 @@
       </div>
 
       <div class="debrief-actions">
-        <button type="button" id="btn-restart" class="btn-chrome-primary">RE-ENGAGE OPERATION</button>
-        <button type="button" id="btn-return-briefing" class="btn-chrome-ghost">RETURN TO BRIEFING</button>
+        <button type="button" id="btn-restart" class="btn-chrome-primary">NEXT ADAPTIVE MISSION</button>
+        <button type="button" id="btn-return-briefing" class="btn-chrome-ghost">RETURN TO CAMPAIGN</button>
       </div>
     </div>
   </div>

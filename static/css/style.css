@@ -460,3 +460,54 @@ kbd { background: #1e293b; border: 1px solid var(--chrome-silver); color: #fff; 
 .btn-chrome-download { padding: 10px; background: rgba(0, 0, 0, 0.6); border: 1px solid var(--chrome-silver); color: #fff; font-family: inherit; cursor: pointer; }
 .btn-chrome-download:hover { background: #fff; color: #000; }
 .debrief-actions { display: flex; gap: 12px; }
+
+/* TACTICAL EXECUTION PANEL & TARGET LIST */
+.target-list {
+  list-style: none;
+  padding: 0;
+  margin-top: 8px;
+  font-size: 11px;
+}
+.target-list li {
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.04);
+  border-left: 2px solid #00ffcc;
+  margin-bottom: 4px;
+}
+.proposals-container {
+  background: rgba(0, 0, 0, 0.6);
+  border: 1px solid var(--chrome-border);
+  padding: 12px;
+  margin: 14px 0;
+  max-height: 200px;
+  overflow-y: auto;
+}
+.proposals-container h3 {
+  font-size: 11px;
+  color: var(--chrome-silver);
+  margin-bottom: 8px;
+}
+.proposal-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 11px;
+}
+.prop-sender { font-weight: 700; color: #fff; }
+.prop-action { color: #00ffcc; font-size: 10px; text-transform: uppercase; }
+.prop-risk { padding: 2px 6px; font-size: 9px; font-weight: 700; border-radius: 2px; }
+.risk-low { background: rgba(0, 255, 204, 0.15); color: #00ffcc; }
+.risk-med { background: rgba(255, 183, 0, 0.15); color: #ffb700; }
+.exec-msg {
+  padding: 8px;
+  margin-top: 8px;
+  font-size: 12px;
+  text-align: center;
+  border: 1px solid #00ffcc;
+  color: #00ffcc;
+  background: rgba(0, 255, 204, 0.08);
+}
+.color-red { color: #ff3344 !important; }
