@@ -9,10 +9,10 @@ class DemoRegistrationRequest(BaseModel):
 class EmailThreat(BaseModel):
     id: str
     sender: str
-    sender_email: str
+    sender_email: str = "threat@bot.internal"
     subject: str
     category: Literal["phishing", "spam", "newsletter", "social", "promotions", "finance", "work", "personal"]
-    threat_level: int = Field(..., ge=1, le=5)
+    threat_level: int = Field(default=3, ge=1, le=5)
     action: Optional[Literal["purge", "archive", "quarantine", "filter"]] = None
     applied_in_session: bool = False
     opt_out_link: Optional[str] = None
@@ -52,7 +52,7 @@ class InboxAnalysisSummary(BaseModel):
 
 class CleanupOperationRequest(BaseModel):
     session_id: str
-    operations: List[Dict[str, Any]] # [{"cluster_id": "...", "action": "archive" | "filter" | "unsubscribe"}]
+    operations: List[Dict[str, Any]]
 
 class ExecutionAuditItem(BaseModel):
     operation_id: str

@@ -1,10 +1,10 @@
 /**
  * ZEROHOUR 3D FIRST-PERSON SHOOTER ENGINE
  * Upgrades:
- *  - Fixed POV rotation (YXZ order strictly, no random roll/drift)
- *  - Glowing Holographic Red Dot Sight on ADS
- *  - Melee-only Enemy Assault AI
- *  - Cyber-Juggernaut Boss (320 HP, 4x Normal Health)
+ *  - Full Difficulty Spawning (Recruit: 6, Veteran: 14, Elite: 22 + Boss)
+ *  - Fast Melee Assault Speed (up to 10.5 m/s)
+ *  - Fixed POV rotation (YXZ order strictly, zero roll)
+ *  - Red Dot Sight & Full-Auto Gunfire
  */
 class FPSGameEngine {
   constructor(canvasId, sound) {
@@ -15,12 +15,10 @@ class FPSGameEngine {
     this.camera = null;
     this.renderer = null;
 
-    // Cutscene
     this.isCutscene = false;
     this.cutsceneTime = 0;
     this.cutsceneDuration = 4.2;
 
-    // Player State
     this.player = {
       position: new THREE.Vector3(0, 1.7, 12),
       velocity: new THREE.Vector3(),
@@ -39,20 +37,17 @@ class FPSGameEngine {
       shotsHit: 0,
     };
 
-    // Camera Look: Pitch & Yaw (Zero Roll)
     this.pitch = 0;
     this.yaw = 0;
     this.isLocked = false;
+    this.difficulty = "veteran";
 
-    // Inputs
     this.keys = { w: false, a: false, s: false, d: false, shift: false };
     this.mouse = { left: false, right: false };
 
-    // Full-Auto (750 RPM)
     this.fireRate = 0.08;
     this.lastShotTime = 0;
 
-    // Viewmodel & Red Dot
     this.weaponRig = null;
     this.redDotMesh = null;
     this.muzzleLight = null;
@@ -62,16 +57,13 @@ class FPSGameEngine {
     this.recoilOffset = 0;
     this.cockAnimOffset = 0;
 
-    // Entities & Boss
     this.threats = [];
     this.enemies = [];
     this.boss = null;
     this.bossSpawned = false;
     this.wallBoxes = [];
 
-    // Callbacks
     this.onKillThreat = null;
-    this.onBossDamage = null;
     this.onMissionEnd = null;
     this.onCutsceneFinish = null;
 
@@ -85,7 +77,6 @@ class FPSGameEngine {
     this.scene.fog = new THREE.FogExp2(0x0e131d, 0.012);
 
     this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 180);
-    // STRICT YXZ EULER ROTATION ORDER: Eliminates diagonal roll & random wobbling
     this.camera.rotation.order = 'YXZ';
     this.camera.position.set(0, 4.5, 26);
     this.camera.lookAt(0, 1.8, -10);
@@ -95,7 +86,6 @@ class FPSGameEngine {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = true;
 
-    // HIGH-CONTRAST LIGHTING
     const ambientLight = new THREE.AmbientLight(0x607899, 1.5);
     this.scene.add(ambientLight);
 
@@ -119,52 +109,39 @@ class FPSGameEngine {
   buildWeaponViewmodel() {
     this.weaponRig = new THREE.Group();
 
-    // M4A1 Matte Obsidian Receiver
     const matReceiver = new THREE.MeshStandardMaterial({ color: 0x141820, roughness: 0.3, metalness: 0.8 });
     const receiver = new THREE.Mesh(new THREE.BoxGeometry(0.065, 0.085, 0.38), matReceiver);
     this.weaponRig.add(receiver);
 
-    // Chrome Silver Handguard accents
     const handguard = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.07, 0.25), new THREE.MeshStandardMaterial({ color: 0x222a36, metalness: 0.85, roughness: 0.2 }));
     handguard.position.set(0, 0.01, -0.26);
     this.weaponRig.add(handguard);
 
-    // Barrel
     const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.42, 12), matReceiver);
     barrel.rotation.x = Math.PI / 2;
     barrel.position.set(0, 0.02, -0.38);
     this.weaponRig.add(barrel);
 
-    // EOTech Holographic Sight Housing
     const sight = new THREE.Mesh(new THREE.BoxGeometry(0.044, 0.05, 0.07), new THREE.MeshStandardMaterial({ color: 0x0a0c10 }));
     sight.position.set(0, 0.07, -0.05);
     this.weaponRig.add(sight);
 
-    // Sight Glass Plate
-    const glass = new THREE.Mesh(new THREE.PlaneGeometry(0.03, 0.032), new THREE.MeshBasicMaterial({ color: 0x223344, transparent: true, opacity: 0.4 }));
-    glass.position.set(0, 0.07, -0.075);
-    this.weaponRig.add(glass);
-
-    // GLOWING RED DOT RETICLE (Aligned for ADS)
     const redDotMat = new THREE.MeshBasicMaterial({ color: 0xff0033 });
     this.redDotMesh = new THREE.Mesh(new THREE.CircleGeometry(0.003, 16), redDotMat);
     this.redDotMesh.position.set(0, 0.07, -0.076);
     this.weaponRig.add(this.redDotMesh);
 
-    // Curved Magazine
     const mag = new THREE.Mesh(new THREE.BoxGeometry(0.038, 0.17, 0.075), new THREE.MeshStandardMaterial({ color: 0x1f2530 }));
     mag.position.set(0, -0.11, -0.04);
     mag.rotation.x = 0.22;
     this.weaponRig.add(mag);
 
-    // Under-barrel Tactical Flashlight
     this.flashlight = new THREE.SpotLight(0xddeeff, 2.6, 38, Math.PI / 4, 0.35, 1.2);
     this.flashlight.position.set(0.05, 0.02, -0.4);
     this.flashlight.target.position.set(0.05, 0.02, -10);
     this.weaponRig.add(this.flashlight);
     this.weaponRig.add(this.flashlight.target);
 
-    // Muzzle Flash
     this.muzzleLight = new THREE.PointLight(0xffaa22, 0, 18);
     this.muzzleLight.position.set(0, 0.02, -0.6);
     this.weaponRig.add(this.muzzleLight);
@@ -175,14 +152,12 @@ class FPSGameEngine {
   }
 
   buildFacility() {
-    // Floor
     const floorGeo = new THREE.PlaneGeometry(90, 90);
     const floorMat = new THREE.MeshStandardMaterial({ color: 0x141a24, roughness: 0.4, metalness: 0.45 });
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
     this.scene.add(floor);
 
-    // Ceiling
     const ceilGeo = new THREE.PlaneGeometry(90, 90);
     const ceil = new THREE.Mesh(ceilGeo, new THREE.MeshStandardMaterial({ color: 0x0f141d, roughness: 0.8 }));
     ceil.rotation.x = Math.PI / 2;
@@ -197,24 +172,20 @@ class FPSGameEngine {
       this.wallBoxes.push(new THREE.Box3().setFromObject(wall));
     };
 
-    // Perimeter Walls
     addWall(0, -42, 84, 2);
     addWall(0, 42, 84, 2);
     addWall(-42, 0, 2, 84);
     addWall(42, 0, 2, 84);
 
-    // Vault Corridors
     addWall(-14, 0, 2, 55);
     addWall(14, 0, 2, 55);
 
-    // Overhead Lights
     for (let lz = -30; lz <= 30; lz += 12) {
       this.spawnCeilingLight(0, lz);
       this.spawnCeilingLight(-26, lz);
       this.spawnCeilingLight(26, lz);
     }
 
-    // Server Racks
     for (let z = -30; z <= 30; z += 7) {
       if (Math.abs(z) < 5) continue;
       this.spawnServerRack(-26, z);
@@ -249,9 +220,9 @@ class FPSGameEngine {
     }
   }
 
-  // CONTROLS & CAMERA LOOK (STRICT YXZ PITCH/YAW, ZERO DIAGONAL WOBBLE)
   setupControls() {
     window.addEventListener("keydown", (e) => {
+      this.sound.init();
       if (this.isCutscene) return;
       const k = e.key.toLowerCase();
       if (k === "w") this.keys.w = true;
@@ -280,19 +251,18 @@ class FPSGameEngine {
       if (!e.shiftKey) this.keys.shift = false;
     });
 
-    // PURE HORIZONTAL = YAW, PURE VERTICAL = PITCH
     window.addEventListener("mousemove", (e) => {
       if (!this.isLocked || this.isCutscene) return;
       const sensitivity = 0.002;
       this.yaw -= e.movementX * sensitivity;
       this.pitch -= e.movementY * sensitivity;
 
-      // Clamp vertical pitch strictly between -82 deg and +82 deg
       const maxPitch = Math.PI / 2.18;
       this.pitch = Math.max(-maxPitch, Math.min(maxPitch, this.pitch));
     });
 
     window.addEventListener("mousedown", (e) => {
+      this.sound.init();
       if (!this.isLocked || this.isCutscene) return;
       if (e.button === 0) {
         this.mouse.left = true;
@@ -341,8 +311,10 @@ class FPSGameEngine {
     this.player.slideDir.copy(moveDir);
   }
 
-  loadSession(threats) {
-    this.threats = threats;
+  // ROBUST SPAWNING: RECRUIT (6), VETERAN (14), ELITE (22 + BOSS)
+  loadSession(threats, diff = "veteran") {
+    this.threats = threats || [];
+    this.difficulty = diff.toLowerCase();
     this.enemies.forEach(en => this.scene.remove(en.mesh));
     this.enemies = [];
     if (this.boss) {
@@ -351,11 +323,27 @@ class FPSGameEngine {
     }
     this.bossSpawned = false;
 
-    threats.forEach((th, i) => {
-      const angle = (i / threats.length) * Math.PI * 2;
-      const dist = 16 + (i % 3) * 6;
+    // Guaranteed fallback if threats array is empty
+    if (this.threats.length === 0) {
+      const counts = { recruit: 6, veteran: 14, elite: 22 };
+      const num = counts[this.difficulty] || 14;
+      for (let k = 1; k <= num; k++) {
+        this.threats.push({
+          id: `THR-GEN-${k:03d}`,
+          sender: `Cluster Node #${k}`,
+          sender_email: `node-${k}@threat.internal`,
+          subject: `Automated Intrusion Threat #${k}`,
+          category: ["phishing", "spam", "promotions", "newsletter"][k % 4],
+          threat_level: (k % 5) + 1
+        });
+      }
+    }
+
+    this.threats.forEach((th, i) => {
+      const angle = (i / this.threats.length) * Math.PI * 2;
+      const dist = 14 + (i % 4) * 6;
       const ex = Math.cos(angle) * dist;
-      const ez = Math.sin(angle) * dist - 8;
+      const ez = Math.sin(angle) * dist - 6;
 
       const enemyMesh = this.createSoldierMesh(th.category, false);
       enemyMesh.position.set(ex, 0, ez);
@@ -369,12 +357,13 @@ class FPSGameEngine {
         maxHealth: 80,
         isBoss: false,
         lastAttack: 0,
-        threatLevel: th.threat_level
+        threatLevel: th.threat_level || 3
       });
     });
+
+    console.log(`[ZeroHour 3D] Spawned ${this.enemies.length} enemies in ${this.difficulty.toUpperCase()} mode.`);
   }
 
-  // 3D SOLDIER MESH (MELEE ONLY - BLADES/STUN BATON)
   createSoldierMesh(cat, isBoss = false) {
     const group = new THREE.Group();
     const scale = isBoss ? 1.7 : 1.0;
@@ -386,7 +375,6 @@ class FPSGameEngine {
     const skinMat = new THREE.MeshStandardMaterial({ color: 0x3a424e });
     const meleeWeaponMat = new THREE.MeshStandardMaterial({ color: 0xdde4ec, metalness: 0.95, roughness: 0.1 });
 
-    // Torso
     const torso = new THREE.Mesh(new THREE.BoxGeometry(0.55 * scale, 0.72 * scale, 0.34 * scale), camoMat);
     torso.position.y = 1.1 * scale;
     group.add(torso);
@@ -395,7 +383,6 @@ class FPSGameEngine {
     vest.position.y = 1.15 * scale;
     group.add(vest);
 
-    // Head
     const head = new THREE.Mesh(new THREE.SphereGeometry(0.2 * scale, 16, 16), skinMat);
     head.position.y = 1.64 * scale;
     group.add(head);
@@ -404,18 +391,15 @@ class FPSGameEngine {
     helmet.position.y = 1.67 * scale;
     group.add(helmet);
 
-    // Glowing Visor
     const visor = new THREE.Mesh(new THREE.BoxGeometry(0.28 * scale, 0.08 * scale, 0.12 * scale), new THREE.MeshBasicMaterial({ color: visorColor }));
     visor.position.set(0, 1.65 * scale, 0.17 * scale);
     group.add(visor);
 
-    // Melee Combat Weapon (Tactical Machete / Spiked Baton in Hand)
     const bladeArm = new THREE.Mesh(new THREE.BoxGeometry(0.06 * scale, 0.08 * scale, 0.65 * scale), meleeWeaponMat);
     bladeArm.position.set(0.25 * scale, 1.05 * scale, 0.28 * scale);
     bladeArm.rotation.x = 0.35;
     group.add(bladeArm);
 
-    // Legs
     const legGeo = new THREE.BoxGeometry(0.2 * scale, 0.75 * scale, 0.22 * scale);
     const leftLeg = new THREE.Mesh(legGeo, camoMat);
     leftLeg.position.set(-0.16 * scale, 0.38 * scale, 0);
@@ -429,7 +413,6 @@ class FPSGameEngine {
     return group;
   }
 
-  // SPAWN 4X HEALTH JUGGERNAUT BOSS (320 HP)
   spawnBoss() {
     if (this.bossSpawned) return;
     this.bossSpawned = true;
@@ -443,7 +426,7 @@ class FPSGameEngine {
       id: "BOSS-TITAN",
       subject: "CYBER-JUGGERNAUT // TITAN-01 [ROOT PROTOCOL]",
       mesh: bossMesh,
-      health: 320, // 4X NORMAL HEALTH (80 * 4 = 320)
+      health: 320,
       maxHealth: 320,
       isBoss: true,
       lastAttack: 0,
@@ -451,7 +434,6 @@ class FPSGameEngine {
     };
     this.enemies.push(this.boss);
 
-    // Unhide Boss HUD Bar
     const bBar = document.getElementById("boss-hud-bar");
     if (bBar) bBar.classList.remove("hidden");
   }
@@ -467,15 +449,12 @@ class FPSGameEngine {
     this.player.shotsFired += 1;
     this.sound.playGunshot(this.player.isADS);
 
-    // Recoil Climb
     this.recoilOffset = 0.055;
     this.pitch += 0.011;
 
-    // Flash
-    this.muzzleLight.intensity = 3.6;
+    this.muzzleLight.intensity = 3.8;
     setTimeout(() => { this.muzzleLight.intensity = 0; }, 35);
 
-    // Raycast from Camera Center
     const raycaster = new THREE.Raycaster();
     raycaster.setFromCamera(new THREE.Vector2(0, 0), this.camera);
 
@@ -495,7 +474,6 @@ class FPSGameEngine {
         this.sound.playHitmarker();
         this.showHitmarker(false);
 
-        // Update Boss Health Bar if boss is damaged
         if (targetEnemy.isBoss) {
           const fill = document.getElementById("boss-bar-fill");
           if (fill) fill.style.width = `${Math.max(0, (targetEnemy.health / targetEnemy.maxHealth) * 100)}%`;
@@ -530,7 +508,6 @@ class FPSGameEngine {
       this.onKillThreat(enemy.id, enemy.subject, this.threats.length - this.enemies.filter(e => !e.isBoss).length, this.threats.length);
     }
 
-    // Spawn Boss after half of regular enemies are defeated
     if (!this.bossSpawned && this.enemies.length <= Math.floor(this.threats.length / 2)) {
       this.spawnBoss();
     }
@@ -570,7 +547,6 @@ class FPSGameEngine {
   update(dt) {
     const now = performance.now() / 1000;
 
-    // Cutscene Camera Sweep
     if (this.isCutscene) {
       this.cutsceneTime += dt;
       const progress = Math.min(this.cutsceneTime / this.cutsceneDuration, 1.0);
@@ -590,7 +566,6 @@ class FPSGameEngine {
 
     if (!this.isLocked) return;
 
-    // Full-Automatic Spray
     if (this.mouse.left && !this.player.isReloading) {
       if (now - this.lastShotTime >= this.fireRate) {
         this.lastShotTime = now;
@@ -598,17 +573,16 @@ class FPSGameEngine {
       }
     }
 
-    // Movement & Sliding
     let targetCameraY = 1.7;
 
     if (this.player.isSliding) {
       targetCameraY = 0.85;
       this.player.slideTimer -= dt;
-      const slideSpeed = 15.0 * (this.player.slideTimer / 0.65) + 3.0;
+      const slideSpeed = 16.0 * (this.player.slideTimer / 0.65) + 3.0;
       this.player.position.addScaledVector(this.player.slideDir, slideSpeed * dt);
       if (this.player.slideTimer <= 0) this.player.isSliding = false;
     } else {
-      const speed = this.keys.shift ? 11.5 : 6.2;
+      const speed = this.keys.shift ? 12.0 : 6.5;
       const moveDir = new THREE.Vector3();
       if (this.keys.w) moveDir.z -= 1;
       if (this.keys.s) moveDir.z += 1;
@@ -621,7 +595,6 @@ class FPSGameEngine {
 
     this.player.position.y += (targetCameraY - this.player.position.y) * 12 * dt;
 
-    // Gravity
     this.player.velocity.y -= 18 * dt;
     this.player.position.y += this.player.velocity.y * dt;
 
@@ -631,15 +604,12 @@ class FPSGameEngine {
       this.player.canJump = true;
     }
 
-    // Bounds
     this.player.position.x = Math.max(-39, Math.min(39, this.player.position.x));
     this.player.position.z = Math.max(-39, Math.min(39, this.player.position.z));
 
-    // STRICT YXZ EULER CAMERA ORIENTATION (NO DIAGONAL ROLLING)
     this.camera.position.copy(this.player.position);
     this.camera.rotation.set(this.pitch, this.yaw, 0, 'YXZ');
 
-    // Viewmodel Positioning & Red Dot Visibility
     const targetPos = this.player.isADS ? this.adsPos : this.hipPos;
     this.weaponRig.position.lerp(targetPos, 0.22);
     this.weaponRig.position.z += this.recoilOffset;
@@ -648,41 +618,40 @@ class FPSGameEngine {
     const targetRoll = this.player.isSliding ? 0.35 : 0;
     this.weaponRig.rotation.z += (targetRoll - this.weaponRig.rotation.z) * 10 * dt;
 
-    // MELEE-ONLY ENEMY ASSAULT AI
+    // AGGRESSIVE FAST MELEE ENEMY ASSAULT
     const timeMs = performance.now();
+    
+    // DIFFICULTY SPEEDS: Recruit 6.0m/s, Veteran 8.5m/s, Elite 10.5m/s
+    const baseChaseSpeed = this.difficulty === "elite" ? 10.5 : (this.difficulty === "veteran" ? 8.5 : 6.0);
+
     this.enemies.forEach(en => {
       en.mesh.lookAt(this.player.position.x, 0, this.player.position.z);
       const dist = en.mesh.position.distanceTo(this.player.position);
 
-      // Running animation
-      en.mesh.userData.animPhase += dt * (en.isBoss ? 5 : 8);
-      const legAngle = Math.sin(en.mesh.userData.animPhase) * 0.45;
+      en.mesh.userData.animPhase += dt * (en.isBoss ? 7 : 12);
+      const legAngle = Math.sin(en.mesh.userData.animPhase) * 0.55;
       en.mesh.userData.leftLeg.rotation.x = legAngle;
       en.mesh.userData.rightLeg.rotation.x = -legAngle;
 
-      // Charge directly at player
-      const attackRange = en.isBoss ? 2.8 : 2.1;
+      const attackRange = en.isBoss ? 3.0 : 2.2;
       if (dist > attackRange) {
         const toPlayer = new THREE.Vector3().subVectors(this.player.position, en.mesh.position).normalize();
         toPlayer.y = 0;
-        const chaseSpeed = en.isBoss ? 3.2 : 3.8;
-        en.mesh.position.addScaledVector(toPlayer, chaseSpeed * dt);
+        const currentSpeed = en.isBoss ? 4.5 : baseChaseSpeed;
+        en.mesh.position.addScaledVector(toPlayer, currentSpeed * dt);
       } else {
-        // CLOSE-QUARTERS MELEE STRIKE
-        if (timeMs - en.lastAttack > (en.isBoss ? 1500 : 1200)) {
+        if (timeMs - en.lastAttack > (en.isBoss ? 1300 : 950)) {
           en.lastAttack = timeMs;
           this.sound.playMeleeStrike();
 
-          // Weapon swing animation
           if (en.mesh.userData.bladeArm) {
-            en.mesh.userData.bladeArm.rotation.x = -0.8;
+            en.mesh.userData.bladeArm.rotation.x = -0.9;
             setTimeout(() => {
               if (en.mesh && en.mesh.userData.bladeArm) en.mesh.userData.bladeArm.rotation.x = 0.35;
-            }, 250);
+            }, 200);
           }
 
-          // Damage player
-          const dmg = en.isBoss ? 28 : 14;
+          const dmg = en.isBoss ? 32 : (this.difficulty === "elite" ? 20 : 14);
           this.player.health -= dmg;
           this.showDamageVignette();
 
@@ -693,7 +662,6 @@ class FPSGameEngine {
       }
     });
 
-    // Health Regeneration
     if (this.player.health < this.player.maxHealth && this.player.health > 0) {
       this.player.health = Math.min(this.player.maxHealth, this.player.health + 3.5 * dt);
     }

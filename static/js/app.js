@@ -10,9 +10,9 @@ document.addEventListener("DOMContentLoaded", () => {
   const inputCallsign = document.getElementById("input-callsign");
   const inputEmail = document.getElementById("input-email");
   const btnRnd = document.getElementById("btn-rnd-callsign");
-  const btnConnectGmail = document.createElement("button");
 
-  // Create "CONNECT REAL GMAIL" button inside terminal
+  // Real Gmail Connect Button
+  const btnConnectGmail = document.createElement("button");
   btnConnectGmail.type = "button";
   btnConnectGmail.className = "btn-chrome-ghost";
   btnConnectGmail.style.width = "100%";
@@ -43,24 +43,20 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnReturnBriefing = document.getElementById("btn-return-briefing");
 
   let selectedDifficulty = "veteran";
-  let currentSession = { session_id: "ZH-DEFAULT", callsign: "BRAVO-SIX", is_real_gmail: false };
+  let currentSession = { session_id: "ZH-DEFAULT", callsign: "BRAVO-SIX", is_real_gmail: false, threats: [] };
   const game = new FPSGameEngine("fps-canvas", window.soundEngine);
   game.start();
 
-  // Connect Real Gmail OAuth Flow
   btnConnectGmail.addEventListener("click", async () => {
     try {
       const res = await fetch(`/api/auth/google/url?session_id=${currentSession.session_id}`);
       const data = await res.json();
-      if (data.auth_url) {
-        window.location.href = data.auth_url;
-      }
+      if (data.auth_url) window.location.href = data.auth_url;
     } catch (e) {
       alert("Unable to contact OAuth gateway.");
     }
   });
 
-  // Check URL params for OAuth return
   const urlParams = new URLSearchParams(window.location.search);
   if (urlParams.get("auth_status") === "connected") {
     btnConnectGmail.innerHTML = "🟢 GMAIL CONNECTED (READY FOR INBOX SCAN)";
@@ -68,12 +64,13 @@ document.addEventListener("DOMContentLoaded", () => {
     btnConnectGmail.style.color = "#00ffcc";
   }
 
-  // Difficulty selection
+  // FIXED DIFFICULTY HIGHLIGHTER
   document.querySelectorAll(".diff-btn").forEach(btn => {
     btn.addEventListener("click", () => {
       document.querySelectorAll(".diff-btn").forEach(b => b.classList.remove("selected"));
       btn.classList.add("selected");
-      selectedDifficulty = btn.getAttribute("data-val");
+      selectedDifficulty = btn.getAttribute("data-val") || "veteran";
+      console.log(`[ZeroHour] Difficulty Selected: ${selectedDifficulty}`);
     });
   });
 
@@ -82,7 +79,6 @@ document.addEventListener("DOMContentLoaded", () => {
     inputCallsign.value = CALLSIGNS[Math.floor(Math.random() * CALLSIGNS.length)];
   });
 
-  // 1. REGISTRATION & INBOX ANALYSIS
   formReg.addEventListener("submit", async (e) => {
     e.preventDefault();
     const callsign = inputCallsign.value.trim() || "BRAVO-SIX";
@@ -96,12 +92,30 @@ document.addEventListener("DOMContentLoaded", () => {
       });
       currentSession = await res.json();
 
-      // Trigger Inbox Intelligence Scan (Fetches real emails if OAuth connected)
       const scanRes = await fetch(`/api/inbox/analyze?session_id=${currentSession.session_id}`, { method: "POST" });
       const analysis = await scanRes.json();
-      console.log("Inbox Analysis Result:", analysis);
+      console.log("Analysis Output:", analysis);
     } catch (err) {
       console.warn("Using offline sandbox session.");
+      const counts = { recruit: 6, veteran: 14, elite: 22 };
+      const total = counts[selectedDifficulty] || 14;
+      currentSession = {
+        session_id: "OFFLINE",
+        callsign: callsign.toUpperCase(),
+        difficulty: selectedDifficulty,
+        threats_total: total,
+        threats: []
+      };
+      for (let i = 1; i <= total; i++) {
+        currentSession.threats.push({
+          id: `THR-${i:03d}`,
+          sender: `Tactical Threat #${i}`,
+          sender_email: `threat-${i}@sandbox.net`,
+          subject: `Digital Breach Vector #${i}`,
+          category: ["phishing", "spam", "promotions", "newsletter"][i % 4],
+          threat_level: (i % 5) + 1
+        });
+      }
     }
 
     metaCallsign.textContent = currentSession.callsign;
@@ -115,13 +129,13 @@ document.addEventListener("DOMContentLoaded", () => {
     screenMenu.classList.remove("hidden");
   });
 
-  // 2. DEPLOY & START AMBIENCE
   btnDeploy.addEventListener("click", () => {
+    window.soundEngine.init();
     window.soundEngine.startBunkerAmbience();
     screenBriefing.classList.add("hidden");
     cutsceneOverlay.classList.remove("hidden");
 
-    game.loadSession(currentSession.threats || []);
+    game.loadSession(currentSession.threats || [], selectedDifficulty);
     hudCallsign.textContent = currentSession.callsign;
     hudObjective.textContent = `PURGE DIGITAL THREAT NODES [ 0 / ${game.threats.length} ]`;
     game.playCutscene();
@@ -134,6 +148,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   pointerlockOverlay.addEventListener("click", () => {
+    window.soundEngine.init();
     game.canvas.requestPointerLock();
   });
 
@@ -148,7 +163,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Real-time HUD loop
   setInterval(() => {
     if (!game.isLocked) return;
     healthVal.textContent = Math.round(game.player.health);
@@ -163,7 +177,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }, 40);
 
-  // Killfeed and Operation Staging
   const approvedOperations = [];
   game.onKillThreat = (id, subject, neutralized, total) => {
     hudObjective.textContent = `PURGE DIGITAL THREAT NODES [ ${neutralized} / ${total} ]`;
@@ -173,7 +186,6 @@ document.addEventListener("DOMContentLoaded", () => {
     killfeed.prepend(item);
     setTimeout(() => item.remove(), 4000);
 
-    // Queue real operation for post-mission execution
     approvedOperations.push({
       sender_email: subject.split(" ")[0].replace("[", "").replace("]", ""),
       action: "archive",
@@ -181,7 +193,6 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   };
 
-  // 3. MISSION END & ONE-CLICK AUTOMATION DASHBOARD
   game.onMissionEnd = async (isVictory, stats) => {
     tacticalHud.classList.add("hidden");
     pointerlockOverlay.classList.add("hidden");
@@ -198,7 +209,6 @@ document.addEventListener("DOMContentLoaded", () => {
     resAccuracy.textContent = `${stats.accuracy}%`;
     resHealth.textContent = `${stats.health}%`;
 
-    // ONE-CLICK LIVE GMAIL EXECUTION BUTTON
     const exportBox = document.querySelector(".export-box");
     if (!document.getElementById("btn-exec-live")) {
       const liveBtn = document.createElement("button");
@@ -234,7 +244,7 @@ document.addEventListener("DOMContentLoaded", () => {
     game.player.health = 100;
     game.player.ammoClip = 30;
     game.player.ammoReserve = 120;
-    game.loadSession(currentSession.threats || []);
+    game.loadSession(currentSession.threats || [], selectedDifficulty);
     btnDeploy.click();
   });
 

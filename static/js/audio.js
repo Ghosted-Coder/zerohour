@@ -3,6 +3,7 @@ class ProceduralAudio {
     this.ctx = null;
     this.bgmOsc = null;
     this.bgmGain = null;
+    this.noiseBuffer = null;
   }
 
   init() {
@@ -13,13 +14,20 @@ class ProceduralAudio {
     if (this.ctx.state === "suspended") {
       this.ctx.resume();
     }
+    if (!this.noiseBuffer && this.ctx) {
+      const bufferSize = Math.floor(this.ctx.sampleRate * 0.12);
+      this.noiseBuffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+      const data = this.noiseBuffer.getChannelData(0);
+      for (let i = 0; i < bufferSize; i++) {
+        data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (this.ctx.sampleRate * 0.015));
+      }
+    }
   }
 
   startBunkerAmbience() {
     this.init();
     if (this.bgmOsc) return;
 
-    // Atmospheric deep sub-bass hum
     this.bgmOsc = this.ctx.createOscillator();
     this.bgmGain = this.ctx.createGain();
     this.bgmOsc.type = "sine";
@@ -47,45 +55,43 @@ class ProceduralAudio {
     osc.stop(now + 0.15);
   }
 
+  // LOUD, PUNCHY FULL-AUTO GUNSHOT (UNMUTED & RELIABLE)
   playGunshot(isADS) {
     this.init();
+    if (this.ctx.state === "suspended") {
+      this.ctx.resume();
+    }
     const now = this.ctx.currentTime;
     
-    // Heavy Sub Punch
+    // Sub-bass heavy thump
     const osc = this.ctx.createOscillator();
     const oscGain = this.ctx.createGain();
     osc.type = "sine";
-    osc.frequency.setValueAtTime(isADS ? 150 : 180, now);
-    osc.frequency.exponentialRampToValueAtTime(30, now + 0.12);
-    oscGain.gain.setValueAtTime(0.55, now);
+    osc.frequency.setValueAtTime(isADS ? 160 : 190, now);
+    osc.frequency.exponentialRampToValueAtTime(28, now + 0.12);
+    oscGain.gain.setValueAtTime(0.7, now);
     oscGain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
     osc.connect(oscGain);
     oscGain.connect(this.ctx.destination);
     osc.start(now);
     osc.stop(now + 0.12);
 
-    // Mechanical Crack Noise
-    const bufferSize = this.ctx.sampleRate * 0.08;
-    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
-    const data = buffer.getChannelData(0);
-    for (let i = 0; i < bufferSize; i++) {
-      data[i] = (Math.random() * 2 - 1) * Math.exp(-i / (this.ctx.sampleRate * 0.012));
+    // Mechanical powder crack
+    if (this.noiseBuffer) {
+      const noise = this.ctx.createBufferSource();
+      noise.buffer = this.noiseBuffer;
+      const noiseGain = this.ctx.createGain();
+      noiseGain.gain.setValueAtTime(0.5, now);
+      noiseGain.gain.linearRampToValueAtTime(0.01, now + 0.08);
+      noise.connect(noiseGain);
+      noiseGain.connect(this.ctx.destination);
+      noise.start(now);
     }
-    const noise = this.ctx.createBufferSource();
-    noise.buffer = buffer;
-    const noiseGain = this.ctx.createGain();
-    noiseGain.gain.setValueAtTime(0.4, now);
-    noiseGain.gain.linearRampToValueAtTime(0.01, now + 0.08);
-    noise.connect(noiseGain);
-    noiseGain.connect(this.ctx.destination);
-    noise.start(now);
   }
 
   playReload() {
     this.init();
     const now = this.ctx.currentTime;
-    
-    // Mag drop click
     const osc1 = this.ctx.createOscillator();
     const g1 = this.ctx.createGain();
     osc1.type = "triangle";
@@ -98,8 +104,8 @@ class ProceduralAudio {
     osc1.start(now);
     osc1.stop(now + 0.1);
 
-    // New mag insert clack at 0.5s
     setTimeout(() => {
+      if (!this.ctx) return;
       const osc2 = this.ctx.createOscillator();
       const g2 = this.ctx.createGain();
       osc2.type = "sawtooth";
@@ -120,9 +126,9 @@ class ProceduralAudio {
     const osc = this.ctx.createOscillator();
     const gain = this.ctx.createGain();
     osc.type = "triangle";
-    osc.frequency.setValueAtTime(180, now);
+    osc.frequency.setValueAtTime(200, now);
     osc.frequency.exponentialRampToValueAtTime(40, now + 0.18);
-    gain.gain.setValueAtTime(0.45, now);
+    gain.gain.setValueAtTime(0.5, now);
     gain.gain.linearRampToValueAtTime(0.01, now + 0.18);
     osc.connect(gain);
     gain.connect(this.ctx.destination);
@@ -137,7 +143,7 @@ class ProceduralAudio {
     const gain = this.ctx.createGain();
     osc.type = "sine";
     osc.frequency.setValueAtTime(2500, now);
-    gain.gain.setValueAtTime(0.15, now);
+    gain.gain.setValueAtTime(0.18, now);
     gain.gain.exponentialRampToValueAtTime(0.001, now + 0.035);
     osc.connect(gain);
     gain.connect(this.ctx.destination);
