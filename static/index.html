@@ -3,36 +3,39 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ZEROHOUR // Modern Warfare Infiltration</title>
+  <title>ZEROHOUR // 3D First-Person Infiltration</title>
   <link rel="stylesheet" href="/static/css/style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body class="tactical-body">
 
-  <!-- SCREEN 1: REGISTRATION -->
+  <!-- SCREEN 1: OBSIDIAN & CHROME REGISTRATION TERMINAL -->
   <section id="screen-menu" class="overlay-screen active">
-    <div class="command-terminal">
-      <div class="terminal-badge">TASK FORCE 141 // DIGITAL OPS</div>
-      <h1 class="tactical-title">ZEROHOUR</h1>
-      <p class="tactical-subtitle">OPERATION DIGITAL RECKONING // FULL-AUTO INFILTRATION</p>
+    <div class="terminal-frame">
+      <div class="terminal-badge">
+        <span class="chrome-dot"></span>
+        <span>TF-141 // CYBER DIVISION RECONNAISSANCE</span>
+      </div>
+      <h1 class="chrome-title">ZEROHOUR</h1>
+      <p class="chrome-subtitle">OPERATION DIGITAL RECKONING // HIGH-THREAT INGRESS</p>
       
       <form id="form-registration" class="terminal-form" novalidate>
         <div class="form-row">
           <label>OPERATOR CALLSIGN</label>
           <div class="input-box">
-            <span>&gt;</span>
+            <span class="input-sym">&gt;</span>
             <input type="text" id="input-callsign" placeholder="e.g. BRAVO-SIX" required autocomplete="off">
-            <button type="button" id="btn-rnd-callsign">RND</button>
+            <button type="button" id="btn-rnd-callsign" class="btn-chrome-sm">RND</button>
           </div>
           <span class="error-msg" id="err-callsign"></span>
         </div>
 
         <div class="form-row">
-          <label>OPERATOR COMM FREQ (EMAIL)</label>
+          <label>SECURE COMM FREQ (EMAIL)</label>
           <div class="input-box">
-            <span>@</span>
+            <span class="input-sym">@</span>
             <input type="email" id="input-email" placeholder="commander@zerohour.internal" required autocomplete="off">
           </div>
           <span class="error-msg" id="err-email"></span>
@@ -40,14 +43,23 @@
 
         <div class="form-row">
           <label>OPERATION INTENSITY</label>
-          <div class="diff-grid">
-            <label class="diff-btn"><input type="radio" name="difficulty" value="recruit"><span>RECRUIT</span></label>
-            <label class="diff-btn selected"><input type="radio" name="difficulty" value="veteran" checked><span>VETERAN</span></label>
-            <label class="diff-btn"><input type="radio" name="difficulty" value="elite"><span>ELITE</span></label>
+          <div class="diff-grid" id="diff-selector">
+            <div class="diff-btn" data-val="recruit">
+              <span class="diff-title">RECRUIT</span>
+              <span class="diff-sub">5 THREATS</span>
+            </div>
+            <div class="diff-btn selected" data-val="veteran">
+              <span class="diff-title">VETERAN</span>
+              <span class="diff-sub">10 THREATS</span>
+            </div>
+            <div class="diff-btn" data-val="elite">
+              <span class="diff-title">ELITE</span>
+              <span class="diff-sub">15 + BOSS</span>
+            </div>
           </div>
         </div>
 
-        <button type="submit" class="btn-engage">
+        <button type="submit" class="btn-chrome-primary">
           <span>INITIALIZE DEPLOYMENT &gt;&gt;</span>
         </button>
       </form>
@@ -56,42 +68,42 @@
 
   <!-- SCREEN 2: BRIEFING -->
   <section id="screen-briefing" class="overlay-screen hidden">
-    <div class="briefing-terminal">
+    <div class="terminal-frame briefing-frame">
       <div class="briefing-top">
-        <span class="briefing-tag">TOP SECRET // WEAPONS FREE</span>
+        <span class="chrome-tag">TOP SECRET // CLASSIFIED INTEL</span>
         <h2>OPERATION DIGITAL RECKONING</h2>
         <div class="briefing-meta">
-          <span>CALLSIGN: <strong id="meta-callsign">BRAVO-SIX</strong></span>
-          <span>LOCATION: <strong>SUB-TERRAIN VAULT 07</strong></span>
-          <span>WEAPON: <strong>M4 CARBINE // FULL AUTO ONLY</strong></span>
+          <span>OPERATOR: <strong id="meta-callsign" class="chrome-text">BRAVO-SIX</strong></span>
+          <span>LOCATION: <strong class="chrome-text">SUB-TERRAIN DATA BUNKER 07</strong></span>
+          <span>WEAPONS: <strong class="chrome-text">M4 CARBINE [FULL-AUTO]</strong></span>
         </div>
       </div>
 
       <div class="briefing-body">
         <div class="briefing-intel">
-          <h3>TACTICAL INTEL</h3>
-          <p>Digital threat nodes have seized central routing conduits. Full-auto suppression authorized. Eliminate hostile cyber-mercenaries before inbox saturation triggers mission failure.</p>
+          <h3>SITUATION REPORT</h3>
+          <p>Hostile mercenary drones have taken root in the digital vault. Intel reports enemies are stripped of ranged arms and will rush for close-quarters melee combat. High-threat Juggernaut detected in the sub-level.</p>
           <div class="intel-bullet">
-            <strong>HONEST EXECUTION:</strong> Neutralized threats compile real <code>filters.xml</code> and <code>unsubscribe.csv</code> files upon extraction.
+            <strong>HONEST REMEDIATION:</strong> Purged threat nodes produce authentic <code>filters.xml</code> and <code>unsubscribe.csv</code> files upon extraction.
           </div>
         </div>
         <div class="briefing-controls">
           <h3>CONTROLS</h3>
           <div class="ctrl-grid">
-            <div><kbd>W A S D</kbd> <span>MOVEMENT</span></div>
+            <div><kbd>W A S D</kbd> <span>TACTICAL MOVEMENT</span></div>
+            <div><kbd>MOUSE</kbd> <span>PRECISION AIM (YXZ)</span></div>
             <div><kbd>HOLD LEFT CLICK</kbd> <span>FULL-AUTO 30-ROUND SPRAY</span></div>
-            <div><kbd>RIGHT CLICK</kbd> <span>AIM DOWN SIGHTS (ADS)</span></div>
+            <div><kbd>RIGHT CLICK</kbd> <span>AIM DOWN SIGHTS (RED DOT)</span></div>
             <div><kbd>SHIFT</kbd> <span>SPRINT</span></div>
             <div><kbd>C / CTRL</kbd> <span>TACTICAL SLIDE</span></div>
-            <div><kbd>SPACE</kbd> <span>JUMP</span></div>
             <div><kbd>R</kbd> <span>RELOAD</span></div>
           </div>
         </div>
       </div>
 
       <div class="briefing-bottom">
-        <button type="button" id="btn-back-menu" class="btn-ghost">&lt;&lt; REVISE CREDENTIALS</button>
-        <button type="button" id="btn-deploy" class="btn-engage">INFILTRATE FACILITY &gt;&gt;</button>
+        <button type="button" id="btn-back-menu" class="btn-chrome-ghost">&lt;&lt; REVISE CREDENTIALS</button>
+        <button type="button" id="btn-deploy" class="btn-chrome-primary">INFILTRATE FACILITY &gt;&gt;</button>
       </div>
     </div>
   </section>
@@ -100,26 +112,26 @@
   <div id="game-container">
     <canvas id="fps-canvas"></canvas>
 
-    <!-- CINEMATIC CUTSCENE BARS & TELEMETRY -->
+    <!-- CUTSCENE LETTERBOX & TELEMETRY -->
     <div id="cutscene-overlay" class="cutscene-overlay hidden">
       <div class="cinema-bar cinema-bar-top"></div>
       <div class="cinema-bar cinema-bar-bottom"></div>
       <div class="cod-telemetry">
-        <div class="telemetry-line" id="tel-1">&gt; TRANSMISSION ACTIVE</div>
-        <div class="telemetry-line" id="tel-2">LOC: DIGITAL VAULT // SUB-TERRAIN 07</div>
-        <div class="telemetry-line" id="tel-3">DATE: 31 OCT 2026 // 03:28:14Z</div>
-        <div class="telemetry-line highlight" id="tel-4">OP: <span id="tel-callsign">BRAVO-SIX</span> // TF-141</div>
-        <div class="telemetry-line color-green" id="tel-5">STATUS: WEAPONS FREE // ENGAGE</div>
+        <div class="telemetry-line">&gt; SATELLITE UPLINK ACQUIRED</div>
+        <div class="telemetry-line">LOC: DIGITAL VAULT // SUB-TERRAIN 07</div>
+        <div class="telemetry-line">TIME: 03:28:14Z // D-DAY</div>
+        <div class="telemetry-line highlight">OP: <span id="tel-callsign">BRAVO-SIX</span> // TF-141</div>
+        <div class="telemetry-line color-chrome">STATUS: WEAPONS FREE // CODE RED</div>
       </div>
     </div>
 
-    <!-- POINTER LOCK CLICK PROMPT -->
+    <!-- POINTER LOCK PROMPT -->
     <div id="pointerlock-overlay" class="pointerlock-overlay hidden">
       <div class="pointerlock-box">
         <div class="lock-icon">🎯</div>
         <h3>SYSTEM ARMED</h3>
-        <p>CLICK TO ENGAGE FIRST-PERSON COMBAT</p>
-        <small>[HOLD LEFT CLICK FOR FULL AUTO] // [C TO SLIDE]</small>
+        <p>CLICK TO ENGAGE POV COMBAT</p>
+        <small>[HOLD LEFT CLICK: FULL AUTO] // [C: SLIDE] // [RIGHT CLICK: RED DOT]</small>
       </div>
     </div>
 
@@ -135,63 +147,73 @@
       <div id="hitmarker" class="hitmarker hidden"></div>
       <div id="damage-vignette" class="damage-vignette"></div>
 
-      <!-- Objective Bar -->
+      <!-- Top Objective Bar -->
       <header class="hud-objective-bar">
-        <div class="obj-badge">ACTIVE OPERATION</div>
+        <div class="obj-badge">PRIMARY OBJECTIVE</div>
         <div class="obj-text" id="hud-objective-text">PURGE DIGITAL THREAT NODES [ 0 / 10 ]</div>
       </header>
+
+      <!-- BOSS HEALTH BAR (Appears during Boss Battle) -->
+      <div id="boss-hud-bar" class="boss-hud-bar hidden">
+        <div class="boss-title-wrap">
+          <span class="boss-warn">⚠️ HOSTILE PROTOCOL NEXUS ⚠️</span>
+          <span class="boss-name">CYBER-JUGGERNAUT // TITAN-01 [320 HP]</span>
+        </div>
+        <div class="boss-bar-track">
+          <div id="boss-bar-fill" class="boss-bar-fill" style="width: 100%;"></div>
+        </div>
+      </div>
 
       <!-- Bottom Left: Health -->
       <div class="hud-bottom-left">
         <div class="operator-tag" id="hud-callsign">BRAVO-SIX</div>
         <div class="health-wrap">
-          <span class="hud-lbl">VITAL SIGNS</span>
+          <span class="hud-lbl">HEALTH</span>
           <div class="health-bar"><div id="health-fill" class="health-fill"></div></div>
           <span id="health-val" class="health-val">100</span>
         </div>
       </div>
 
-      <!-- Bottom Right: Weapon (Full-Auto Only) -->
+      <!-- Bottom Right: Full-Auto Ammo -->
       <div class="hud-bottom-right">
-        <div class="weapon-name">M4A1 CARBINE // 5.56x45MM NATO</div>
+        <div class="weapon-name">M4A1 CARBINE // 5.56 NATO [RED-DOT]</div>
         <div class="ammo-display">
           <span id="ammo-clip" class="ammo-clip">30</span>
           <span class="ammo-slash">/</span>
           <span id="ammo-reserve" class="ammo-reserve">120</span>
         </div>
-        <div class="fire-mode color-cyan">AUTO [LOCKED] // 750 RPM</div>
+        <div class="fire-mode">FULL AUTO // 750 RPM</div>
       </div>
 
-      <!-- Killfeed -->
       <div id="triage-killfeed" class="triage-killfeed"></div>
     </div>
   </div>
 
   <!-- DEBRIEF MODAL -->
   <div id="modal-debrief" class="modal-backdrop hidden">
-    <div class="modal-card">
-      <div class="modal-tag" id="debrief-tag">MISSION ACCOMPLISHED</div>
-      <h2 id="debrief-title">SECTOR PURIFIED</h2>
-      <p id="debrief-desc">Underground facility secured. Threats eliminated.</p>
+    <div class="terminal-frame modal-frame">
+      <div class="modal-tag" id="debrief-tag">OPERATION COMPLETED</div>
+      <h2 id="debrief-title" class="chrome-title">SECTOR PURIFIED</h2>
+      <p id="debrief-desc">Underground facility secured. Threat nodes eradicated.</p>
 
       <div class="stats-row">
         <div class="stat-col"><span id="res-purged">0</span><small>THREATS PURGED</small></div>
         <div class="stat-col"><span id="res-accuracy">0%</span><small>ACCURACY</small></div>
-        <div class="stat-col"><span id="res-health">100%</span><small>VITAL SIGNS</small></div>
+        <div class="stat-col"><span id="res-health">100%</span><small>HEALTH</small></div>
       </div>
 
       <div class="export-box">
         <h3>HONEST EXECUTION REMEDIATION ARTIFACTS</h3>
-        <p>Your actions compiled genuine, safe email filter rules:</p>
+        <p>Your combat actions compiled real email remediation rules:</p>
         <div class="export-btns">
-          <button type="button" id="btn-export-xml" class="btn-download">DOWNLOAD filters.xml</button>
-          <button type="button" id="btn-export-csv" class="btn-download">DOWNLOAD unsubscribe.csv</button>
+          <button type="button" id="btn-export-xml" class="btn-chrome-download">DOWNLOAD filters.xml</button>
+          <button type="button" id="btn-export-csv" class="btn-chrome-download">DOWNLOAD unsubscribe.csv</button>
         </div>
       </div>
 
       <div class="debrief-actions">
-        <button type="button" id="btn-restart" class="btn-engage">RE-ENGAGE OPERATION</button>
-        <button type="button" id="btn-return-briefing" class="btn-ghost">RETURN TO BRIEFING</button>
+        <button type="button" id="btn-restart" class="btn-chrome-primary">RE-ENGAGE OPERATION</button>
+        <button type="button" id="btn-return-briefing" class="btn-chrome-ghost">RETURN TO BRIEFING</button>
       </div>
     </div>
   </div>

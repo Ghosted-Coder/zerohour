@@ -35,9 +35,20 @@ document.addEventListener("DOMContentLoaded", () => {
   const btnRestart = document.getElementById("btn-restart");
   const btnReturnBriefing = document.getElementById("btn-return-briefing");
 
+  let selectedDifficulty = "veteran";
   let currentSession = null;
   const game = new FPSGameEngine("fps-canvas", window.soundEngine);
   game.start();
+
+  // FIXED DIFFICULTY SELECTOR HIGHLIGHTER
+  const diffButtons = document.querySelectorAll(".diff-btn");
+  diffButtons.forEach(btn => {
+    btn.addEventListener("click", () => {
+      diffButtons.forEach(b => b.classList.remove("selected"));
+      btn.classList.add("selected");
+      selectedDifficulty = btn.getAttribute("data-val");
+    });
+  });
 
   const CALLSIGNS = ["BRAVO-SIX", "GHOST-1", "SOAP-01", "ROACH", "WAR-PIG", "VIPER"];
   btnRnd.addEventListener("click", () => {
@@ -50,7 +61,6 @@ document.addEventListener("DOMContentLoaded", () => {
     e.preventDefault();
     const callsign = inputCallsign.value.trim();
     const email = inputEmail.value.trim();
-    const diff = document.querySelector('input[name="difficulty"]:checked').value;
 
     let valid = true;
     if (!callsign) { errCallsign.textContent = "Callsign required."; valid = false; }
@@ -61,14 +71,14 @@ document.addEventListener("DOMContentLoaded", () => {
       const res = await fetch("/api/demo/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ callsign, email, difficulty: diff })
+        body: JSON.stringify({ callsign, email, difficulty: selectedDifficulty })
       });
       currentSession = await res.json();
     } catch (err) {
       currentSession = {
         session_id: "OFFLINE",
         callsign: callsign.toUpperCase(),
-        threats_total: 10,
+        threats_total: selectedDifficulty === "recruit" ? 5 : (selectedDifficulty === "veteran" ? 10 : 15),
         threats: [
           { id: "THR-1", category: "phishing", subject: "Critical Server Infiltration Node", threat_level: 5 },
           { id: "THR-2", category: "spam", subject: "Automated Crypto Syndicate Bot", threat_level: 3 },
@@ -97,12 +107,9 @@ document.addEventListener("DOMContentLoaded", () => {
     game.loadSession(currentSession.threats);
     hudCallsign.textContent = currentSession.callsign;
     hudObjective.textContent = `PURGE DIGITAL THREAT NODES [ 0 / ${currentSession.threats.length} ]`;
-
-    // Start COD MW camera sweep and weapon chambering cutscene
     game.playCutscene();
   });
 
-  // Cutscene finishes -> Hand over to Player Pointer Lock
   game.onCutsceneFinish = () => {
     cutsceneOverlay.classList.add("hidden");
     pointerlockOverlay.classList.remove("hidden");
@@ -124,7 +131,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   });
 
-  // Real-time HUD loop
   setInterval(() => {
     if (!game.isLocked) return;
     healthVal.textContent = Math.round(game.player.health);
@@ -161,8 +167,8 @@ document.addEventListener("DOMContentLoaded", () => {
     pointerlockOverlay.classList.add("hidden");
 
     if (isVictory) {
-      debriefTag.textContent = "MISSION ACCOMPLISHED // SECTOR PURIFIED";
-      debriefTitle.textContent = "FACILITY SECURED";
+      debriefTag.textContent = "MISSION ACCOMPLISHED // FACILITY PURIFIED";
+      debriefTitle.textContent = "SECTOR SECURED";
     } else {
       debriefTag.textContent = "CRITICAL FAILURE // KIA";
       debriefTitle.textContent = "OPERATOR DOWN";
@@ -175,7 +181,6 @@ document.addEventListener("DOMContentLoaded", () => {
     modalDebrief.classList.remove("hidden");
   };
 
-  // Honest Exports
   document.getElementById("btn-export-xml").addEventListener("click", () => {
     window.location.href = `/api/demo/session/${currentSession.session_id}/export/filters.xml`;
   });

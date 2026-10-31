@@ -1,6 +1,10 @@
 /**
- * ZEROHOUR 3D FIRST-PERSON SHOOTER ENGINE (CALL OF DUTY MW BERSERK BUILD)
- * Full-Auto 30-round spray, Cinematic Infiltration Cutscene, High Visibility AAA Lighting
+ * ZEROHOUR 3D FIRST-PERSON SHOOTER ENGINE
+ * Upgrades:
+ *  - Fixed POV rotation (YXZ order strictly, no random roll/drift)
+ *  - Glowing Holographic Red Dot Sight on ADS
+ *  - Melee-only Enemy Assault AI
+ *  - Cyber-Juggernaut Boss (320 HP, 4x Normal Health)
  */
 class FPSGameEngine {
   constructor(canvasId, sound) {
@@ -11,7 +15,7 @@ class FPSGameEngine {
     this.camera = null;
     this.renderer = null;
 
-    // Cutscene System
+    // Cutscene
     this.isCutscene = false;
     this.cutsceneTime = 0;
     this.cutsceneDuration = 4.2;
@@ -35,34 +39,39 @@ class FPSGameEngine {
       shotsHit: 0,
     };
 
-    // Camera Look
+    // Camera Look: Pitch & Yaw (Zero Roll)
     this.pitch = 0;
     this.yaw = 0;
     this.isLocked = false;
 
-    // Movement & Keys
+    // Inputs
     this.keys = { w: false, a: false, s: false, d: false, shift: false };
     this.mouse = { left: false, right: false };
 
-    // PURE FULL-AUTO ONLY (750 RPM = 0.08s per shot)
+    // Full-Auto (750 RPM)
     this.fireRate = 0.08;
     this.lastShotTime = 0;
 
-    // Viewmodel
+    // Viewmodel & Red Dot
     this.weaponRig = null;
+    this.redDotMesh = null;
     this.muzzleLight = null;
     this.flashlight = null;
     this.hipPos = new THREE.Vector3(0.2, -0.22, -0.45);
-    this.adsPos = new THREE.Vector3(0.0, -0.162, -0.32);
+    this.adsPos = new THREE.Vector3(0.0, -0.07, -0.28);
     this.recoilOffset = 0;
     this.cockAnimOffset = 0;
 
-    // World & Entities
+    // Entities & Boss
     this.threats = [];
     this.enemies = [];
+    this.boss = null;
+    this.bossSpawned = false;
     this.wallBoxes = [];
 
+    // Callbacks
     this.onKillThreat = null;
+    this.onBossDamage = null;
     this.onMissionEnd = null;
     this.onCutsceneFinish = null;
 
@@ -73,10 +82,12 @@ class FPSGameEngine {
 
   initThree() {
     this.scene = new THREE.Scene();
-    this.scene.fog = new THREE.FogExp2(0x131d2b, 0.01);
+    this.scene.fog = new THREE.FogExp2(0x0e131d, 0.012);
 
     this.camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 180);
-    this.camera.position.set(0, 4.5, 26); // Starting high for cutscene sweep
+    // STRICT YXZ EULER ROTATION ORDER: Eliminates diagonal roll & random wobbling
+    this.camera.rotation.order = 'YXZ';
+    this.camera.position.set(0, 4.5, 26);
     this.camera.lookAt(0, 1.8, -10);
 
     this.renderer = new THREE.WebGLRenderer({ canvas: this.canvas, antialias: true, powerPreference: "high-performance" });
@@ -84,14 +95,14 @@ class FPSGameEngine {
     this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     this.renderer.shadowMap.enabled = true;
 
-    // HIGH CONTRAST AAA LIGHTING
-    const ambientLight = new THREE.AmbientLight(0x567399, 1.4);
+    // HIGH-CONTRAST LIGHTING
+    const ambientLight = new THREE.AmbientLight(0x607899, 1.5);
     this.scene.add(ambientLight);
 
-    const hemiLight = new THREE.HemisphereLight(0x8cb4e6, 0x18202a, 1.3);
+    const hemiLight = new THREE.HemisphereLight(0x94b3db, 0x161b24, 1.3);
     this.scene.add(hemiLight);
 
-    const dirLight = new THREE.DirectionalLight(0xe8f4ff, 1.2);
+    const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
     dirLight.position.set(15, 35, 15);
     this.scene.add(dirLight);
 
@@ -108,46 +119,52 @@ class FPSGameEngine {
   buildWeaponViewmodel() {
     this.weaponRig = new THREE.Group();
 
-    // M4A1 Matte Receiver
-    const matReceiver = new THREE.MeshStandardMaterial({ color: 0x1c2128, roughness: 0.25, metalness: 0.85 });
+    // M4A1 Matte Obsidian Receiver
+    const matReceiver = new THREE.MeshStandardMaterial({ color: 0x141820, roughness: 0.3, metalness: 0.8 });
     const receiver = new THREE.Mesh(new THREE.BoxGeometry(0.065, 0.085, 0.38), matReceiver);
     this.weaponRig.add(receiver);
 
-    // Picatinny Rail
-    const rail = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.07, 0.25), new THREE.MeshStandardMaterial({ color: 0x101317, metalness: 0.9 }));
-    rail.position.set(0, 0.01, -0.26);
-    this.weaponRig.add(rail);
+    // Chrome Silver Handguard accents
+    const handguard = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.07, 0.25), new THREE.MeshStandardMaterial({ color: 0x222a36, metalness: 0.85, roughness: 0.2 }));
+    handguard.position.set(0, 0.01, -0.26);
+    this.weaponRig.add(handguard);
 
-    // Barrel & Muzzle Brake
+    // Barrel
     const barrel = new THREE.Mesh(new THREE.CylinderGeometry(0.016, 0.016, 0.42, 12), matReceiver);
     barrel.rotation.x = Math.PI / 2;
     barrel.position.set(0, 0.02, -0.38);
     this.weaponRig.add(barrel);
 
-    // Holographic Sight
-    const sight = new THREE.Mesh(new THREE.BoxGeometry(0.042, 0.048, 0.07), new THREE.MeshStandardMaterial({ color: 0x0f1115 }));
+    // EOTech Holographic Sight Housing
+    const sight = new THREE.Mesh(new THREE.BoxGeometry(0.044, 0.05, 0.07), new THREE.MeshStandardMaterial({ color: 0x0a0c10 }));
     sight.position.set(0, 0.07, -0.05);
     this.weaponRig.add(sight);
 
-    // Reticle
-    const reticle = new THREE.Mesh(new THREE.RingGeometry(0.0035, 0.007, 16), new THREE.MeshBasicMaterial({ color: 0x00ffcc }));
-    reticle.position.set(0, 0.07, -0.086);
-    this.weaponRig.add(reticle);
+    // Sight Glass Plate
+    const glass = new THREE.Mesh(new THREE.PlaneGeometry(0.03, 0.032), new THREE.MeshBasicMaterial({ color: 0x223344, transparent: true, opacity: 0.4 }));
+    glass.position.set(0, 0.07, -0.075);
+    this.weaponRig.add(glass);
 
-    // Magazine
-    const mag = new THREE.Mesh(new THREE.BoxGeometry(0.038, 0.17, 0.075), new THREE.MeshStandardMaterial({ color: 0x242a34 }));
+    // GLOWING RED DOT RETICLE (Aligned for ADS)
+    const redDotMat = new THREE.MeshBasicMaterial({ color: 0xff0033 });
+    this.redDotMesh = new THREE.Mesh(new THREE.CircleGeometry(0.003, 16), redDotMat);
+    this.redDotMesh.position.set(0, 0.07, -0.076);
+    this.weaponRig.add(this.redDotMesh);
+
+    // Curved Magazine
+    const mag = new THREE.Mesh(new THREE.BoxGeometry(0.038, 0.17, 0.075), new THREE.MeshStandardMaterial({ color: 0x1f2530 }));
     mag.position.set(0, -0.11, -0.04);
     mag.rotation.x = 0.22;
     this.weaponRig.add(mag);
 
-    // Tactical Under-barrel Flashlight
-    this.flashlight = new THREE.SpotLight(0xddeeff, 2.8, 38, Math.PI / 4, 0.35, 1.2);
+    // Under-barrel Tactical Flashlight
+    this.flashlight = new THREE.SpotLight(0xddeeff, 2.6, 38, Math.PI / 4, 0.35, 1.2);
     this.flashlight.position.set(0.05, 0.02, -0.4);
     this.flashlight.target.position.set(0.05, 0.02, -10);
     this.weaponRig.add(this.flashlight);
     this.weaponRig.add(this.flashlight.target);
 
-    // Dynamic Muzzle Flash Light
+    // Muzzle Flash
     this.muzzleLight = new THREE.PointLight(0xffaa22, 0, 18);
     this.muzzleLight.position.set(0, 0.02, -0.6);
     this.weaponRig.add(this.muzzleLight);
@@ -160,20 +177,20 @@ class FPSGameEngine {
   buildFacility() {
     // Floor
     const floorGeo = new THREE.PlaneGeometry(90, 90);
-    const floorMat = new THREE.MeshStandardMaterial({ color: 0x18202c, roughness: 0.45, metalness: 0.35 });
+    const floorMat = new THREE.MeshStandardMaterial({ color: 0x141a24, roughness: 0.4, metalness: 0.45 });
     const floor = new THREE.Mesh(floorGeo, floorMat);
     floor.rotation.x = -Math.PI / 2;
     this.scene.add(floor);
 
     // Ceiling
     const ceilGeo = new THREE.PlaneGeometry(90, 90);
-    const ceil = new THREE.Mesh(ceilGeo, new THREE.MeshStandardMaterial({ color: 0x111620, roughness: 0.8 }));
+    const ceil = new THREE.Mesh(ceilGeo, new THREE.MeshStandardMaterial({ color: 0x0f141d, roughness: 0.8 }));
     ceil.rotation.x = Math.PI / 2;
     ceil.position.y = 5.2;
     this.scene.add(ceil);
 
     const addWall = (x, z, w, d, h = 5.2) => {
-      const wallMat = new THREE.MeshStandardMaterial({ color: 0x222d3d, roughness: 0.35, metalness: 0.45 });
+      const wallMat = new THREE.MeshStandardMaterial({ color: 0x1e2736, roughness: 0.35, metalness: 0.5 });
       const wall = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), wallMat);
       wall.position.set(x, h / 2, z);
       this.scene.add(wall);
@@ -190,14 +207,14 @@ class FPSGameEngine {
     addWall(-14, 0, 2, 55);
     addWall(14, 0, 2, 55);
 
-    // Overhead Fluorescent Lights
+    // Overhead Lights
     for (let lz = -30; lz <= 30; lz += 12) {
       this.spawnCeilingLight(0, lz);
       this.spawnCeilingLight(-26, lz);
       this.spawnCeilingLight(26, lz);
     }
 
-    // High Density Server Racks
+    // Server Racks
     for (let z = -30; z <= 30; z += 7) {
       if (Math.abs(z) < 5) continue;
       this.spawnServerRack(-26, z);
@@ -207,24 +224,24 @@ class FPSGameEngine {
 
   spawnCeilingLight(x, z) {
     const fixtureGeo = new THREE.BoxGeometry(0.5, 0.15, 3.5);
-    const fixture = new THREE.Mesh(fixtureGeo, new THREE.MeshBasicMaterial({ color: 0xddeeff }));
+    const fixture = new THREE.Mesh(fixtureGeo, new THREE.MeshBasicMaterial({ color: 0xffffff }));
     fixture.position.set(x, 5.1, z);
     this.scene.add(fixture);
 
-    const light = new THREE.PointLight(0xddeeff, 1.8, 24, 1.3);
+    const light = new THREE.PointLight(0xe2e8f0, 1.8, 24, 1.3);
     light.position.set(x, 4.6, z);
     this.scene.add(light);
   }
 
   spawnServerRack(x, z) {
     const rackGeo = new THREE.BoxGeometry(3.5, 4.4, 1.4);
-    const rack = new THREE.Mesh(rackGeo, new THREE.MeshStandardMaterial({ color: 0x18202c, roughness: 0.4, metalness: 0.6 }));
+    const rack = new THREE.Mesh(rackGeo, new THREE.MeshStandardMaterial({ color: 0x161c28, roughness: 0.4, metalness: 0.6 }));
     rack.position.set(x, 2.2, z);
     this.scene.add(rack);
     this.wallBoxes.push(new THREE.Box3().setFromObject(rack));
 
-    const ledMatA = new THREE.MeshBasicMaterial({ color: 0x00ffcc });
-    const ledMatB = new THREE.MeshBasicMaterial({ color: 0xff3366 });
+    const ledMatA = new THREE.MeshBasicMaterial({ color: 0xffffff });
+    const ledMatB = new THREE.MeshBasicMaterial({ color: 0xff3344 });
     for (let ly = 1.0; ly < 4.0; ly += 0.4) {
       const led = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.05, 0.02), Math.random() > 0.4 ? ledMatA : ledMatB);
       led.position.set(x + (Math.random() - 0.5) * 2.2, ly, z + 0.71);
@@ -232,6 +249,7 @@ class FPSGameEngine {
     }
   }
 
+  // CONTROLS & CAMERA LOOK (STRICT YXZ PITCH/YAW, ZERO DIAGONAL WOBBLE)
   setupControls() {
     window.addEventListener("keydown", (e) => {
       if (this.isCutscene) return;
@@ -242,7 +260,6 @@ class FPSGameEngine {
       if (k === "d") this.keys.d = true;
       if (e.shiftKey) this.keys.shift = true;
 
-      // Tactical Slide
       if ((k === "c" || e.code === "ControlLeft" || e.code === "ControlRight") && !this.player.isSliding) {
         this.triggerSlide();
       }
@@ -263,15 +280,18 @@ class FPSGameEngine {
       if (!e.shiftKey) this.keys.shift = false;
     });
 
+    // PURE HORIZONTAL = YAW, PURE VERTICAL = PITCH
     window.addEventListener("mousemove", (e) => {
       if (!this.isLocked || this.isCutscene) return;
-      const sensitivity = 0.0022;
+      const sensitivity = 0.002;
       this.yaw -= e.movementX * sensitivity;
       this.pitch -= e.movementY * sensitivity;
-      this.pitch = Math.max(-Math.PI / 2.3, Math.min(Math.PI / 2.3, this.pitch));
+
+      // Clamp vertical pitch strictly between -82 deg and +82 deg
+      const maxPitch = Math.PI / 2.18;
+      this.pitch = Math.max(-maxPitch, Math.min(maxPitch, this.pitch));
     });
 
-    // PURE FULL-AUTO MOUSE HANDLERS
     window.addEventListener("mousedown", (e) => {
       if (!this.isLocked || this.isCutscene) return;
       if (e.button === 0) {
@@ -289,7 +309,6 @@ class FPSGameEngine {
     window.addEventListener("contextmenu", (e) => e.preventDefault());
   }
 
-  // TRIGGER COD MW CINEMATIC INFILTRATION CUTSCENE
   playCutscene() {
     this.isCutscene = true;
     this.cutsceneTime = 0;
@@ -297,7 +316,6 @@ class FPSGameEngine {
     this.camera.position.set(0, 4.6, 26);
     this.camera.lookAt(0, 1.8, -10);
 
-    // Audio Weapon Cocking at 2.4s
     setTimeout(() => {
       this.sound.playCockWeapon();
       this.cockAnimOffset = 0.15;
@@ -327,6 +345,11 @@ class FPSGameEngine {
     this.threats = threats;
     this.enemies.forEach(en => this.scene.remove(en.mesh));
     this.enemies = [];
+    if (this.boss) {
+      this.scene.remove(this.boss.mesh);
+      this.boss = null;
+    }
+    this.bossSpawned = false;
 
     threats.forEach((th, i) => {
       const angle = (i / threats.length) * Math.PI * 2;
@@ -334,7 +357,7 @@ class FPSGameEngine {
       const ex = Math.cos(angle) * dist;
       const ez = Math.sin(angle) * dist - 8;
 
-      const enemyMesh = this.createSoldierMesh(th.category);
+      const enemyMesh = this.createSoldierMesh(th.category, false);
       enemyMesh.position.set(ex, 0, ez);
       this.scene.add(enemyMesh);
 
@@ -344,69 +367,93 @@ class FPSGameEngine {
         mesh: enemyMesh,
         health: 80,
         maxHealth: 80,
+        isBoss: false,
         lastAttack: 0,
         threatLevel: th.threat_level
       });
     });
   }
 
-  createSoldierMesh(cat) {
+  // 3D SOLDIER MESH (MELEE ONLY - BLADES/STUN BATON)
+  createSoldierMesh(cat, isBoss = false) {
     const group = new THREE.Group();
-    const visorColor = cat === "phishing" ? 0xff3366 : (cat === "spam" ? 0xffb700 : 0x00ccff);
+    const scale = isBoss ? 1.7 : 1.0;
+    const visorColor = isBoss ? 0xff0022 : (cat === "phishing" ? 0xff2244 : 0xe2e8f0);
 
-    const camoMat = new THREE.MeshStandardMaterial({ color: 0x242d3a, roughness: 0.5 });
-    const vestMat = new THREE.MeshStandardMaterial({ color: 0x121720, roughness: 0.35, metalness: 0.4 });
-    const armorPlateMat = new THREE.MeshStandardMaterial({ color: 0x0a0d12, metalness: 0.85, roughness: 0.2 });
-    const skinMat = new THREE.MeshStandardMaterial({ color: 0x3d4450 });
-    const gunMat = new THREE.MeshStandardMaterial({ color: 0x0e1218, metalness: 0.9, roughness: 0.2 });
+    const camoMat = new THREE.MeshStandardMaterial({ color: isBoss ? 0x0a0c10 : 0x1f2633, roughness: 0.4 });
+    const vestMat = new THREE.MeshStandardMaterial({ color: isBoss ? 0x1a0508 : 0x121720, roughness: 0.3, metalness: 0.5 });
+    const armorPlateMat = new THREE.MeshStandardMaterial({ color: 0x05070a, metalness: 0.9, roughness: 0.15 });
+    const skinMat = new THREE.MeshStandardMaterial({ color: 0x3a424e });
+    const meleeWeaponMat = new THREE.MeshStandardMaterial({ color: 0xdde4ec, metalness: 0.95, roughness: 0.1 });
 
-    // Torso & Plate Carrier
-    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.72, 0.34), camoMat);
-    torso.position.y = 1.1;
+    // Torso
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(0.55 * scale, 0.72 * scale, 0.34 * scale), camoMat);
+    torso.position.y = 1.1 * scale;
     group.add(torso);
 
-    const vest = new THREE.Mesh(new THREE.BoxGeometry(0.58, 0.58, 0.38), vestMat);
-    vest.position.y = 1.15;
+    const vest = new THREE.Mesh(new THREE.BoxGeometry(0.58 * scale, 0.58 * scale, 0.38 * scale), vestMat);
+    vest.position.y = 1.15 * scale;
     group.add(vest);
 
-    // Front Mag Pouches
-    for (let p = -0.16; p <= 0.16; p += 0.16) {
-      const pouch = new THREE.Mesh(new THREE.BoxGeometry(0.11, 0.18, 0.09), armorPlateMat);
-      pouch.position.set(p, 1.05, 0.22);
-      group.add(pouch);
-    }
-
-    // Head & Helmet
-    const head = new THREE.Mesh(new THREE.SphereGeometry(0.2, 16, 16), skinMat);
-    head.position.y = 1.64;
+    // Head
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.2 * scale, 16, 16), skinMat);
+    head.position.y = 1.64 * scale;
     group.add(head);
 
-    const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.23, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.55), vestMat);
-    helmet.position.y = 1.67;
+    const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.23 * scale, 16, 16, 0, Math.PI * 2, 0, Math.PI * 0.55), vestMat);
+    helmet.position.y = 1.67 * scale;
     group.add(helmet);
 
     // Glowing Visor
-    const visor = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.08, 0.12), new THREE.MeshBasicMaterial({ color: visorColor }));
-    visor.position.set(0, 1.65, 0.17);
+    const visor = new THREE.Mesh(new THREE.BoxGeometry(0.28 * scale, 0.08 * scale, 0.12 * scale), new THREE.MeshBasicMaterial({ color: visorColor }));
+    visor.position.set(0, 1.65 * scale, 0.17 * scale);
     group.add(visor);
 
-    // Rifle
-    const rifle = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.12, 0.65), gunMat);
-    rifle.position.set(0.22, 1.12, 0.36);
-    group.add(rifle);
+    // Melee Combat Weapon (Tactical Machete / Spiked Baton in Hand)
+    const bladeArm = new THREE.Mesh(new THREE.BoxGeometry(0.06 * scale, 0.08 * scale, 0.65 * scale), meleeWeaponMat);
+    bladeArm.position.set(0.25 * scale, 1.05 * scale, 0.28 * scale);
+    bladeArm.rotation.x = 0.35;
+    group.add(bladeArm);
 
     // Legs
-    const legGeo = new THREE.BoxGeometry(0.2, 0.75, 0.22);
+    const legGeo = new THREE.BoxGeometry(0.2 * scale, 0.75 * scale, 0.22 * scale);
     const leftLeg = new THREE.Mesh(legGeo, camoMat);
-    leftLeg.position.set(-0.16, 0.38, 0);
+    leftLeg.position.set(-0.16 * scale, 0.38 * scale, 0);
     group.add(leftLeg);
 
     const rightLeg = new THREE.Mesh(legGeo, camoMat);
-    rightLeg.position.set(0.16, 0.38, 0);
+    rightLeg.position.set(0.16 * scale, 0.38 * scale, 0);
     group.add(rightLeg);
 
-    group.userData = { leftLeg, rightLeg, animPhase: Math.random() * Math.PI };
+    group.userData = { leftLeg, rightLeg, bladeArm, animPhase: Math.random() * Math.PI, isBoss };
     return group;
+  }
+
+  // SPAWN 4X HEALTH JUGGERNAUT BOSS (320 HP)
+  spawnBoss() {
+    if (this.bossSpawned) return;
+    this.bossSpawned = true;
+    this.sound.playBossAlert();
+
+    const bossMesh = this.createSoldierMesh("phishing", true);
+    bossMesh.position.set(0, 0, -25);
+    this.scene.add(bossMesh);
+
+    this.boss = {
+      id: "BOSS-TITAN",
+      subject: "CYBER-JUGGERNAUT // TITAN-01 [ROOT PROTOCOL]",
+      mesh: bossMesh,
+      health: 320, // 4X NORMAL HEALTH (80 * 4 = 320)
+      maxHealth: 320,
+      isBoss: true,
+      lastAttack: 0,
+      threatLevel: 5
+    };
+    this.enemies.push(this.boss);
+
+    // Unhide Boss HUD Bar
+    const bBar = document.getElementById("boss-hud-bar");
+    if (bBar) bBar.classList.remove("hidden");
   }
 
   shoot() {
@@ -428,7 +475,7 @@ class FPSGameEngine {
     this.muzzleLight.intensity = 3.6;
     setTimeout(() => { this.muzzleLight.intensity = 0; }, 35);
 
-    // Hit Detection
+    // Raycast from Camera Center
     const raycaster = new THREE.Raycaster();
     raycaster.setFromCamera(new THREE.Vector2(0, 0), this.camera);
 
@@ -447,6 +494,12 @@ class FPSGameEngine {
         targetEnemy.health -= 35;
         this.sound.playHitmarker();
         this.showHitmarker(false);
+
+        // Update Boss Health Bar if boss is damaged
+        if (targetEnemy.isBoss) {
+          const fill = document.getElementById("boss-bar-fill");
+          if (fill) fill.style.width = `${Math.max(0, (targetEnemy.health / targetEnemy.maxHealth) * 100)}%`;
+        }
 
         if (targetEnemy.health <= 0) {
           this.destroyEnemy(targetEnemy);
@@ -468,8 +521,18 @@ class FPSGameEngine {
     const idx = this.enemies.indexOf(enemy);
     if (idx > -1) this.enemies.splice(idx, 1);
 
+    if (enemy.isBoss) {
+      const bBar = document.getElementById("boss-hud-bar");
+      if (bBar) bBar.classList.add("hidden");
+    }
+
     if (this.onKillThreat) {
-      this.onKillThreat(enemy.id, enemy.subject, this.threats.length - this.enemies.length, this.threats.length);
+      this.onKillThreat(enemy.id, enemy.subject, this.threats.length - this.enemies.filter(e => !e.isBoss).length, this.threats.length);
+    }
+
+    // Spawn Boss after half of regular enemies are defeated
+    if (!this.bossSpawned && this.enemies.length <= Math.floor(this.threats.length / 2)) {
+      this.spawnBoss();
     }
 
     if (this.enemies.length === 0) {
@@ -497,7 +560,7 @@ class FPSGameEngine {
     if (this.onMissionEnd) {
       const accuracy = this.player.shotsFired > 0 ? Math.round((this.player.shotsHit / this.player.shotsFired) * 100) : 0;
       this.onMissionEnd(isVictory, {
-        purged: this.threats.length - this.enemies.length,
+        purged: this.threats.length - this.enemies.filter(e => !e.isBoss).length + (this.bossSpawned && (!this.boss || this.boss.health <= 0) ? 1 : 0),
         accuracy: accuracy,
         health: Math.max(0, Math.round(this.player.health))
       });
@@ -507,17 +570,14 @@ class FPSGameEngine {
   update(dt) {
     const now = performance.now() / 1000;
 
-    // 1. CINEMATIC CUTSCENE CAMERA FLIGHT & INSPECTION
+    // Cutscene Camera Sweep
     if (this.isCutscene) {
       this.cutsceneTime += dt;
       const progress = Math.min(this.cutsceneTime / this.cutsceneDuration, 1.0);
-
-      // Smooth step flight towards player eye position
       const t = progress * progress * (3 - 2 * progress);
       this.camera.position.set(0, 4.5 - t * 2.8, 26 - t * 14);
       this.camera.lookAt(0, 1.7, -10 + t * 5);
 
-      // Weapon cocking animation offset
       this.cockAnimOffset *= 0.85;
       this.weaponRig.position.set(0.2, -0.22 - this.cockAnimOffset, -0.45 + this.cockAnimOffset);
 
@@ -530,7 +590,7 @@ class FPSGameEngine {
 
     if (!this.isLocked) return;
 
-    // 2. PURE FULL-AUTOMATIC SPRAY
+    // Full-Automatic Spray
     if (this.mouse.left && !this.player.isReloading) {
       if (now - this.lastShotTime >= this.fireRate) {
         this.lastShotTime = now;
@@ -538,7 +598,7 @@ class FPSGameEngine {
       }
     }
 
-    // 3. SLIDE OR NORMAL MOVEMENT
+    // Movement & Sliding
     let targetCameraY = 1.7;
 
     if (this.player.isSliding) {
@@ -571,17 +631,15 @@ class FPSGameEngine {
       this.player.canJump = true;
     }
 
-    // Boundaries
+    // Bounds
     this.player.position.x = Math.max(-39, Math.min(39, this.player.position.x));
     this.player.position.z = Math.max(-39, Math.min(39, this.player.position.z));
 
-    // Camera Look
+    // STRICT YXZ EULER CAMERA ORIENTATION (NO DIAGONAL ROLLING)
     this.camera.position.copy(this.player.position);
-    this.camera.rotation.set(0, 0, 0);
-    this.camera.rotation.y = this.yaw;
-    this.camera.rotation.x = this.pitch;
+    this.camera.rotation.set(this.pitch, this.yaw, 0, 'YXZ');
 
-    // Viewmodel Recoil + Slide Cant
+    // Viewmodel Positioning & Red Dot Visibility
     const targetPos = this.player.isADS ? this.adsPos : this.hipPos;
     this.weaponRig.position.lerp(targetPos, 0.22);
     this.weaponRig.position.z += this.recoilOffset;
@@ -590,36 +648,54 @@ class FPSGameEngine {
     const targetRoll = this.player.isSliding ? 0.35 : 0;
     this.weaponRig.rotation.z += (targetRoll - this.weaponRig.rotation.z) * 10 * dt;
 
-    // 4. SOLDIER AI
+    // MELEE-ONLY ENEMY ASSAULT AI
     const timeMs = performance.now();
     this.enemies.forEach(en => {
       en.mesh.lookAt(this.player.position.x, 0, this.player.position.z);
       const dist = en.mesh.position.distanceTo(this.player.position);
 
-      en.mesh.userData.animPhase += dt * 8;
+      // Running animation
+      en.mesh.userData.animPhase += dt * (en.isBoss ? 5 : 8);
       const legAngle = Math.sin(en.mesh.userData.animPhase) * 0.45;
       en.mesh.userData.leftLeg.rotation.x = legAngle;
       en.mesh.userData.rightLeg.rotation.x = -legAngle;
 
-      if (dist > 5.5) {
+      // Charge directly at player
+      const attackRange = en.isBoss ? 2.8 : 2.1;
+      if (dist > attackRange) {
         const toPlayer = new THREE.Vector3().subVectors(this.player.position, en.mesh.position).normalize();
         toPlayer.y = 0;
-        en.mesh.position.addScaledVector(toPlayer, 2.5 * dt);
-      }
+        const chaseSpeed = en.isBoss ? 3.2 : 3.8;
+        en.mesh.position.addScaledVector(toPlayer, chaseSpeed * dt);
+      } else {
+        // CLOSE-QUARTERS MELEE STRIKE
+        if (timeMs - en.lastAttack > (en.isBoss ? 1500 : 1200)) {
+          en.lastAttack = timeMs;
+          this.sound.playMeleeStrike();
 
-      if (dist < 22 && timeMs - en.lastAttack > 2000) {
-        en.lastAttack = timeMs;
-        this.sound.playEnemyFire();
-        this.player.health -= 12;
-        this.showDamageVignette();
+          // Weapon swing animation
+          if (en.mesh.userData.bladeArm) {
+            en.mesh.userData.bladeArm.rotation.x = -0.8;
+            setTimeout(() => {
+              if (en.mesh && en.mesh.userData.bladeArm) en.mesh.userData.bladeArm.rotation.x = 0.35;
+            }, 250);
+          }
 
-        if (this.player.health <= 0) this.triggerMissionEnd(false);
+          // Damage player
+          const dmg = en.isBoss ? 28 : 14;
+          this.player.health -= dmg;
+          this.showDamageVignette();
+
+          if (this.player.health <= 0) {
+            this.triggerMissionEnd(false);
+          }
+        }
       }
     });
 
     // Health Regeneration
     if (this.player.health < this.player.maxHealth && this.player.health > 0) {
-      this.player.health = Math.min(this.player.maxHealth, this.player.health + 4 * dt);
+      this.player.health = Math.min(this.player.maxHealth, this.player.health + 3.5 * dt);
     }
   }
 
