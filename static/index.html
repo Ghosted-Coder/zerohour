@@ -3,227 +3,191 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ZEROHOUR // Operation Digital Reckoning</title>
+  <title>ZEROHOUR // Modern Warfare 3D Tactical FPS</title>
   <link rel="stylesheet" href="/static/css/style.css">
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <!-- Three.js 3D Engine -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
-<body class="tactical-theme">
-  <div class="crt-overlay" aria-hidden="true"></div>
-  <div class="grid-backdrop" aria-hidden="true"></div>
+<body class="tactical-body">
 
-  <!-- SCREEN 1: REGISTRATION -->
-  <section id="screen-registration" class="screen-view active" aria-label="Demo Registration">
-    <div class="terminal-card">
-      <header class="terminal-header">
-        <div class="security-badge">DEFCON 1 // DEMO INGRESS</div>
-        <h1 class="glitch-title">ZEROHOUR</h1>
-        <p class="tagline">OPERATION DIGITAL RECKONING</p>
-      </header>
-
-      <div class="security-advisory">
-        <span class="pulse-dot"></span>
-        <span class="advisory-text">SANDBOX CLEARANCE: No Gmail OAuth or real password required. Safe in-memory chore simulation.</span>
-      </div>
-
-      <form id="form-registration" class="tactical-form" novalidate>
-        <div class="form-group">
-          <label for="input-callsign">OPERATOR CALLSIGN <span class="required">*</span></label>
-          <div class="input-wrapper">
-            <span class="input-prefix">&gt;</span>
-            <input type="text" id="input-callsign" name="callsign" maxlength="20" placeholder="e.g. VANGUARD-01" required autocomplete="off">
-            <button type="button" id="btn-random-callsign" class="btn-ghost-sm" title="Generate Random Callsign">RND</button>
+  <!-- SCREEN 1: 3D COMMAND TERMINAL / REGISTRATION -->
+  <section id="screen-menu" class="overlay-screen active">
+    <div class="command-terminal">
+      <div class="terminal-badge">SECURE INGRESS // DEFCON 1</div>
+      <h1 class="tactical-title">ZEROHOUR</h1>
+      <p class="tactical-subtitle">OPERATION DIGITAL RECKONING // 3D FIRST-PERSON INFILTRATION</p>
+      
+      <form id="form-registration" class="terminal-form" novalidate>
+        <div class="form-row">
+          <label>OPERATOR CALLSIGN</label>
+          <div class="input-box">
+            <span>&gt;</span>
+            <input type="text" id="input-callsign" placeholder="e.g. BRAVO-SIX" required autocomplete="off">
+            <button type="button" id="btn-rnd-callsign">RND</button>
           </div>
-          <span class="field-error" id="error-callsign"></span>
+          <span class="error-msg" id="err-callsign"></span>
         </div>
 
-        <div class="form-group">
-          <label for="input-email">OPERATOR COMM FREQ (EMAIL) <span class="required">*</span></label>
-          <div class="input-wrapper">
-            <span class="input-prefix">@</span>
-            <input type="email" id="input-email" name="email" placeholder="commander@zerohour.internal" required autocomplete="off">
+        <div class="form-row">
+          <label>OPERATOR COMM FREQ (EMAIL)</label>
+          <div class="input-box">
+            <span>@</span>
+            <input type="email" id="input-email" placeholder="operator@zerohour.internal" required autocomplete="off">
           </div>
-          <span class="field-error" id="error-email"></span>
+          <span class="error-msg" id="err-email"></span>
         </div>
 
-        <div class="form-group">
-          <label id="label-difficulty">THREAT THRESHOLD (DIFFICULTY)</label>
-          <div class="difficulty-selector" role="radiogroup" aria-labelledby="label-difficulty">
-            <label class="diff-card">
-              <input type="radio" name="difficulty" value="recruit">
-              <span class="diff-content">
-                <span class="diff-name">RECRUIT</span>
-                <span class="diff-desc">20 Threats // Slower Drift</span>
-              </span>
-            </label>
-            <label class="diff-card selected">
-              <input type="radio" name="difficulty" value="veteran" checked>
-              <span class="diff-content">
-                <span class="diff-name">VETERAN</span>
-                <span class="diff-desc">40 Threats // Standard</span>
-              </span>
-            </label>
-            <label class="diff-card">
-              <input type="radio" name="difficulty" value="elite">
-              <span class="diff-content">
-                <span class="diff-name">ELITE</span>
-                <span class="diff-desc">60 Threats // Swarm Evasion</span>
-              </span>
-            </label>
+        <div class="form-row">
+          <label>OPERATION INTENSITY</label>
+          <div class="diff-grid">
+            <label class="diff-btn"><input type="radio" name="difficulty" value="recruit"><span>RECRUIT</span></label>
+            <label class="diff-btn selected"><input type="radio" name="difficulty" value="veteran" checked><span>VETERAN</span></label>
+            <label class="diff-btn"><input type="radio" name="difficulty" value="elite"><span>ELITE</span></label>
           </div>
         </div>
 
-        <div class="form-banner error-banner hidden" id="banner-registration-error" role="alert"></div>
-
-        <button type="submit" id="btn-enter-op" class="btn-tactical-primary">
-          <span class="btn-glow"></span>
-          <span class="btn-text">ENTER OPERATION &gt;&gt;</span>
+        <button type="submit" class="btn-engage">
+          <span>ENTER COMMAND CENTER &gt;&gt;</span>
         </button>
       </form>
     </div>
   </section>
 
   <!-- SCREEN 2: MISSION BRIEFING -->
-  <section id="screen-briefing" class="screen-view hidden" aria-label="Mission Briefing">
-    <div class="briefing-container">
-      <div class="briefing-header">
-        <div class="dossier-tag">TACTICAL INTEL // CLASSIFIED</div>
+  <section id="screen-briefing" class="overlay-screen hidden">
+    <div class="briefing-terminal">
+      <div class="briefing-top">
+        <span class="briefing-tag">CLASSIFIED // EYES ONLY</span>
         <h2>OPERATION DIGITAL RECKONING</h2>
-        <div class="dossier-meta">
-          <span>OPERATOR: <strong id="briefing-callsign">UNKNOWN</strong></span>
-          <span>DIFFICULTY: <strong id="briefing-difficulty">VETERAN</strong></span>
-          <span>STATUS: <strong class="color-amber">STANDBY FOR DEPLOYMENT</strong></span>
+        <div class="briefing-meta">
+          <span>OPERATOR: <strong id="meta-callsign">UNKNOWN</strong></span>
+          <span>SECTOR: <strong>SUB-TERRAIN SERVER VAULT 07</strong></span>
+          <span>RULES OF ENGAGEMENT: <strong>WEAPONS FREE</strong></span>
         </div>
       </div>
 
-      <div class="briefing-grid">
-        <article class="intel-panel">
-          <h3>SITUATION REPORT</h3>
-          <p>
-            Your digital perimeter has been infiltrated by over 5,000 unread message clusters. 
-            Hostile phishing nodes, subscription spam beacons, and cold syndicates are degrading bandwidth.
-          </p>
-          <div class="objective-box">
-            <h4>PRIMARY OBJECTIVES:</h4>
-            <ul>
-              <li><strong>PURGE (Primary Fire)</strong>: Vaporize malicious phishing nodes and spam clusters.</li>
-              <li><strong>ARCHIVE (Secondary Fire)</strong>: Safely triage and shelve informational newsletters.</li>
-              <li><strong>SECURE INBOX INTEGRITY</strong>: Neutralize targets before Threat Saturation hits 100%.</li>
-            </ul>
+      <div class="briefing-body">
+        <div class="briefing-intel">
+          <h3>INTEL BRIEF</h3>
+          <p>Hostile bot syndicates and automated phishing clusters have seized the central digital data vault. Deploy with the tactical carbine. Neutralize threat nodes before system saturation breaches 100%.</p>
+          <div class="intel-bullet">
+            <strong>PRIMARY WEAPON:</strong> Custom 5.56 Tactical Carbine with Holographic Sight.<br>
+            <strong>HONEST EXECUTION:</strong> Eliminating hostile server drones generates real <code>filters.xml</code> and <code>unsubscribe.csv</code> files for extraction.
           </div>
-        </article>
-
-        <article class="intel-panel controls-panel">
+        </div>
+        <div class="briefing-controls">
           <h3>TACTICAL CONTROLS</h3>
-          <div class="controls-list">
-            <div class="control-row"><kbd>W A S D</kbd> / <kbd>&uarr; &larr; &darr; &rarr;</kbd> <span>INTERCEPTOR MANEUVERING</span></div>
-            <div class="control-row"><kbd>MOUSE AIM</kbd> <span>TARGET ACQUISITION VECTOR</span></div>
-            <div class="control-row"><kbd>LEFT CLICK</kbd> / <kbd>SPACE</kbd> <span>PURGE THREAT (DELETE FILTER)</span></div>
-            <div class="control-row"><kbd>RIGHT CLICK</kbd> / <kbd>E</kbd> <span>TACTICAL ARCHIVE (SAFE SHELVE)</span></div>
+          <div class="ctrl-grid">
+            <div><kbd>W A S D</kbd> <span>TACTICAL MOVEMENT</span></div>
+            <div><kbd>MOUSE</kbd> <span>LOOK / PITCH & YAW</span></div>
+            <div><kbd>LEFT CLICK</kbd> <span>FIRE CARBINE</span></div>
+            <div><kbd>RIGHT CLICK</kbd> <span>AIM DOWN SIGHTS (ADS)</span></div>
+            <div><kbd>SHIFT</kbd> <span>TACTICAL SPRINT</span></div>
+            <div><kbd>SPACE</kbd> <span>JUMP / VAULT</span></div>
+            <div><kbd>R</kbd> <span>TACTICAL RELOAD</span></div>
           </div>
-          <div class="intel-note">
-            <em>Honest Execution: In-game actions compile valid filters.xml and unsubscribe.csv artifacts upon extraction.</em>
-          </div>
-        </article>
+        </div>
       </div>
 
-      <div class="briefing-actions">
-        <button type="button" id="btn-back-reg" class="btn-tactical-secondary">&lt;&lt; REVISE CREDENTIALS</button>
-        <button type="button" id="btn-start-mission" class="btn-tactical-primary">
-          <span class="btn-glow"></span>
-          <span class="btn-text">START MISSION // ENGAGE &gt;&gt;</span>
-        </button>
+      <div class="briefing-bottom">
+        <button type="button" id="btn-back-menu" class="btn-ghost">&lt;&lt; REVISE CREDENTIALS</button>
+        <button type="button" id="btn-deploy" class="btn-engage">DEPLOY TO FACILITY &gt;&gt;</button>
       </div>
     </div>
   </section>
 
-  <!-- SCREEN 3: SHOOTER GAME -->
-  <section id="screen-game" class="screen-view hidden" aria-label="Tactical Engagement Theatre">
-    <header class="hud-top">
-      <div class="hud-block">
-        <span class="hud-label">CALLSIGN</span>
-        <span class="hud-value" id="hud-callsign">GHOST</span>
+  <!-- SCREEN 3: 3D FIRST-PERSON SHOOTER CANVAS & HUD -->
+  <div id="game-container">
+    <canvas id="fps-canvas"></canvas>
+
+    <!-- Pointer Lock Click To Play Overlay -->
+    <div id="pointerlock-overlay" class="pointerlock-overlay hidden">
+      <div class="pointerlock-box">
+        <div class="lock-icon">🎯</div>
+        <h3>SYSTEM ARMED</h3>
+        <p>CLICK ANYWHERE TO ENGAGE FIRST-PERSON CONTROLS</p>
+        <small>[ESC] TO PAUSE / RELEASE MOUSE</small>
       </div>
-      <div class="hud-block">
-        <span class="hud-label">THREATS REMAINING</span>
-        <span class="hud-value color-amber" id="hud-threats">00 / 00</span>
+    </div>
+
+    <!-- COD-STYLE TACTICAL MINIMAL HUD -->
+    <div id="tactical-hud" class="tactical-hud hidden">
+      <!-- Crosshair & Hitmarkers -->
+      <div id="crosshair" class="crosshair">
+        <div class="ch-line ch-top"></div>
+        <div class="ch-line ch-bottom"></div>
+        <div class="ch-line ch-left"></div>
+        <div class="ch-line ch-right"></div>
+        <div class="ch-dot"></div>
       </div>
-      <div class="hud-block">
-        <span class="hud-label">INBOX INTEGRITY</span>
-        <div class="integrity-bar-wrap">
-          <div class="integrity-bar-fill" id="hud-integrity-fill" style="width: 100%;"></div>
+      <div id="hitmarker" class="hitmarker hidden"></div>
+      <div id="damage-vignette" class="damage-vignette"></div>
+
+      <!-- Top Objective Bar -->
+      <header class="hud-objective-bar">
+        <div class="obj-badge">PRIMARY OBJECTIVE</div>
+        <div class="obj-text" id="hud-objective-text">PURGE DIGITAL THREAT NODES [ 0 / 10 ]</div>
+      </header>
+
+      <!-- Bottom Left: Health & Status -->
+      <div class="hud-bottom-left">
+        <div class="operator-tag" id="hud-callsign">OPERATOR</div>
+        <div class="health-wrap">
+          <span class="hud-lbl">HEALTH</span>
+          <div class="health-bar"><div id="health-fill" class="health-fill"></div></div>
+          <span id="health-val" class="health-val">100</span>
         </div>
-        <span class="hud-subvalue" id="hud-integrity-text">100%</span>
-      </div>
-      <div class="hud-block">
-        <span class="hud-label">SCORE // CLEANED</span>
-        <span class="hud-value color-cyan" id="hud-score">0000</span>
-      </div>
-      <button type="button" id="btn-pause-abort" class="btn-ghost-sm">ABORT</button>
-    </header>
-
-    <main class="canvas-container">
-      <canvas id="game-canvas"></canvas>
-      
-      <div id="countdown-overlay" class="countdown-overlay hidden">
-        <div class="countdown-number" id="countdown-number">3</div>
-        <div class="countdown-label">ENGAGING THREAT CLUSTERS...</div>
       </div>
 
-      <footer class="hud-bottom">
-        <div class="ticker-label">TRIAGE LOG:</div>
-        <div class="ticker-message" id="hud-triage-log">SYSTEM ONLINE. RADAR ACQUIRING UNREAD INBOX NODES...</div>
-      </footer>
-    </main>
-  </section>
+      <!-- Bottom Right: Weapon & Ammo -->
+      <div class="hud-bottom-right">
+        <div class="weapon-name">M4 CARBINE // 5.56x45</div>
+        <div class="ammo-display">
+          <span id="ammo-clip" class="ammo-clip">30</span>
+          <span class="ammo-slash">/</span>
+          <span id="ammo-reserve" class="ammo-reserve">120</span>
+        </div>
+        <div class="fire-mode">SEMI / AUTO [READY]</div>
+      </div>
 
-  <!-- MODAL: VICTORY / DEFEAT -->
-  <div id="modal-debrief" class="modal-backdrop hidden" role="dialog" aria-modal="true">
+      <!-- Killfeed / Triage Log -->
+      <div id="triage-killfeed" class="triage-killfeed"></div>
+    </div>
+  </div>
+
+  <!-- MODAL: MISSION DEBRIEF -->
+  <div id="modal-debrief" class="modal-backdrop hidden">
     <div class="modal-card">
-      <div class="modal-status" id="debrief-status-tag">MISSION ACCOMPLISHED</div>
-      <h2 id="debrief-title">INBOX PURIFIED</h2>
-      <p id="debrief-summary">Operation completed. Threat clusters eradicated.</p>
+      <div class="modal-tag" id="debrief-tag">MISSION ACCOMPLISHED</div>
+      <h2 id="debrief-title">SECTOR SECURED</h2>
+      <p id="debrief-desc">Underground facility cleared. Digital threats neutralized.</p>
 
-      <div class="debrief-stats">
-        <div class="stat-card">
-          <span class="stat-num" id="stat-purged">0</span>
-          <span class="stat-title">THREATS PURGED</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-num" id="stat-score">0</span>
-          <span class="stat-title">TRIAGE SCORE</span>
-        </div>
-        <div class="stat-card">
-          <span class="stat-num" id="stat-integrity">100%</span>
-          <span class="stat-title">FINAL INTEGRITY</span>
-        </div>
+      <div class="stats-row">
+        <div class="stat-col"><span id="res-purged">0</span><small>THREATS PURGED</small></div>
+        <div class="stat-col"><span id="res-accuracy">0%</span><small>ACCURACY</small></div>
+        <div class="stat-col"><span id="res-health">100%</span><small>INTEGRITY</small></div>
       </div>
 
-      <div class="honest-export-section">
+      <div class="export-box">
         <h3>HONEST EXECUTION REMEDIATION ARTIFACTS</h3>
-        <p>ZeroHour never visits opt-out links automatically and does not mutate your live inbox without explicit confirmation:</p>
-        <div class="export-buttons">
-          <button type="button" id="btn-download-xml" class="btn-tactical-download">
-            DOWNLOAD filters.xml
-            <small>Gmail Importable Rule</small>
-          </button>
-          <button type="button" id="btn-download-csv" class="btn-tactical-download">
-            DOWNLOAD unsubscribe.csv
-            <small>Safe Followup List</small>
-          </button>
+        <p>ZeroHour actions generate genuine, safe remediation rules:</p>
+        <div class="export-btns">
+          <button type="button" id="btn-export-xml" class="btn-download">DOWNLOAD filters.xml</button>
+          <button type="button" id="btn-export-csv" class="btn-download">DOWNLOAD unsubscribe.csv</button>
         </div>
       </div>
 
-      <div class="modal-actions">
-        <button type="button" id="btn-restart-mission" class="btn-tactical-primary">RESTART OPERATION</button>
-        <button type="button" id="btn-exit-briefing" class="btn-tactical-secondary">RETURN TO BRIEFING</button>
+      <div class="debrief-actions">
+        <button type="button" id="btn-restart" class="btn-engage">RE-ENGAGE OPERATION</button>
+        <button type="button" id="btn-return-briefing" class="btn-ghost">RETURN TO BRIEFING</button>
       </div>
     </div>
   </div>
 
   <script src="/static/js/audio.js"></script>
-  <script src="/static/js/game.js"></script>
+  <script src="/static/js/game3d.js"></script>
   <script src="/static/js/app.js"></script>
 </body>
 </html>

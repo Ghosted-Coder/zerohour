@@ -8,11 +8,7 @@ from fastapi.responses import FileResponse
 from app.models import DemoRegistrationRequest, SessionState
 from app.demo_data import generate_threat_dataset
 
-app = FastAPI(
-    title="ZeroHour: Operation Digital Reckoning",
-    description="Email Chore Remediation Tactical Engine",
-    version="1.2.0"
-)
+app = FastAPI(title="ZeroHour 3D FPS Tactical Operations")
 
 app.add_middleware(
     CORSMiddleware,
@@ -27,9 +23,6 @@ ACTIVE_SESSIONS: Dict[str, SessionState] = {}
 @app.post("/api/demo/register", response_model=SessionState)
 async def register_demo_session(req: DemoRegistrationRequest):
     clean_callsign = req.callsign.strip().upper()
-    if not clean_callsign:
-        raise HTTPException(status_code=400, detail="Callsign cannot be empty.")
-
     threats = generate_threat_dataset(req.difficulty)
     session_id = f"ZH-{uuid.uuid4().hex[:8].upper()}"
 
@@ -51,7 +44,7 @@ async def register_demo_session(req: DemoRegistrationRequest):
 async def get_session(session_id: str):
     session = ACTIVE_SESSIONS.get(session_id)
     if not session:
-        raise HTTPException(status_code=404, detail="Operation session not found.")
+        raise HTTPException(status_code=404, detail="Session not found.")
     return session
 
 @app.post("/api/demo/session/{session_id}/triage")
@@ -64,12 +57,10 @@ async def record_triage(session_id: str, payload: dict):
     action = payload.get("action", "purge")
 
     for threat in session.threats:
-        if threat.id == threat_id:
+        if threat.id == threat_id and not threat.applied_in_session:
             threat.action = action
             threat.applied_in_session = True
             session.threats_neutralized += 1
-            if action in ["purge", "quarantine"]:
-                session.filters_generated += 1
             break
 
     return {"status": "ok", "neutralized": session.threats_neutralized, "total": session.threats_total}
@@ -80,32 +71,21 @@ async def export_filters_xml(session_id: str):
     if not session:
         raise HTTPException(status_code=404, detail="Session not found.")
 
-    purged_senders = list({
-        t.sender for t in session.threats
-        if t.applied_in_session and t.action in ["purge", "quarantine"]
-    })
-
-    sender_query = " OR ".join(purged_senders) if purged_senders else "spam-demo@zerohour.internal"
+    purged_senders = list({t.sender for t in session.threats if t.applied_in_session})
+    sender_query = " OR ".join(purged_senders) if purged_senders else "phishing-cluster@zerohour.internal"
 
     xml_content = f"""<?xml version='1.0' encoding='UTF-8'?>
 <feed xmlns='http://www.w3.org/2005/Atom' xmlns:apps='http://schemas.google.com/apps/2006'>
-  <title>ZeroHour Tactical Remediations - {session.callsign}</title>
+  <title>ZeroHour 3D Remediations - {session.callsign}</title>
   <id>tag:zerohour,2026:filters:{session.session_id}</id>
-  <updated>2026-10-31T09:00:00Z</updated>
   <entry>
-    <category term='filter'></category>
-    <title>ZeroHour Threat Purge Rule</title>
+    <title>Threat Purge Rule</title>
     <apps:property name='from' value='{sender_query}'/>
     <apps:property name='shouldTrash' value='true'/>
-    <apps:property name='neverSpam' value='false'/>
   </entry>
 </feed>
 """
-    return Response(
-        content=xml_content,
-        media_type="application/xml",
-        headers={"Content-Disposition": f"attachment; filename=filters_{session.callsign}.xml"}
-    )
+    return Response(content=xml_content, media_type="application/xml")
 
 @app.get("/api/demo/session/{session_id}/export/unsubscribe.csv")
 async def export_unsubscribe_csv(session_id: str):
@@ -113,17 +93,12 @@ async def export_unsubscribe_csv(session_id: str):
     if not session:
         raise HTTPException(status_code=404, detail="Session not found.")
 
-    csv_rows = ["ThreatID,Sender,Subject,UnsubscribeLink"]
+    rows = ["ThreatID,Sender,Subject,UnsubscribeLink"]
     for t in session.threats:
         if t.opt_out_link:
-            csv_rows.append(f'"{t.id}","{t.sender}","{t.subject}","{t.opt_out_link}"')
+            rows.append(f'"{t.id}","{t.sender}","{t.subject}","{t.opt_out_link}"')
 
-    csv_content = "\n".join(csv_rows)
-    return Response(
-        content=csv_content,
-        media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename=unsubscribe_{session.callsign}.csv"}
-    )
+    return Response(content="\n".join(rows), media_type="text/csv")
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 

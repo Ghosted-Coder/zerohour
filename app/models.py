@@ -2,11 +2,9 @@ from typing import List, Optional, Literal
 from pydantic import BaseModel, EmailStr, Field
 
 class DemoRegistrationRequest(BaseModel):
-    callsign: str = Field(..., min_length=2, max_length=24, description="Tactical Callsign")
-    email: EmailStr = Field(..., description="Demo identification email")
-    difficulty: Literal["recruit", "veteran", "elite"] = Field(
-        default="veteran", description="Operation threat intensity"
-    )
+    callsign: str = Field(..., min_length=2, max_length=24)
+    email: EmailStr
+    difficulty: Literal["recruit", "veteran", "elite"] = "veteran"
 
 class EmailThreat(BaseModel):
     id: str
